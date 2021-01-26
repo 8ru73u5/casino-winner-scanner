@@ -1,0 +1,8 @@
+flask
+sqlalchemy
+psycopg2-binary
+requests
+python-dotenv
+redis
+flask-apscheduler
+python-telegram-bot
