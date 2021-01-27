@@ -10,6 +10,7 @@ class AppConfig:
         SECRET_KEY = 'SECRET_KEY', str
         CASINO_ADMIN_USER = 'CASINO_ADMIN_USER', str
         CASINO_ADMIN_PASS = 'CASINO_ADMIN_PASS', str
+        DATABASE_URL = 'CASINO_DATABASE_URL', str
 
     _vars = {}
     _loaded = False
