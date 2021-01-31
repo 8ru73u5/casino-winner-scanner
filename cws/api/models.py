@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Optional, List, Tuple
 
@@ -15,7 +16,7 @@ class Event:
     league_name: str
     first_team: TeamInfo
     second_team: TeamInfo
-    markets: List[Market]
+    tips: List[Tip]
 
     def has_time_info(self) -> bool:
         return self.time is not None
@@ -45,6 +46,8 @@ class Event:
 
             if data['sb'] is not None:
                 time = (data['sb']['gmc']['m'], data['sb']['gmc']['s'])
+                if time == (0, 0):
+                    time = None
             else:
                 time = None
 
@@ -56,7 +59,7 @@ class Event:
                 league_name=data['scn'],
                 first_team=TeamInfo(name=data['epl'][0]['pn'], score=team1_score),
                 second_team=TeamInfo(name=data['epl'][1]['pn'], score=team2_score),
-                markets=[Market.from_json(market) for market in data['ml']]
+                tips=Tip.from_json(data)
             )
         except (KeyError, ValueError, IndexError) as e:
             raise InvalidApiResponseError(data, e)
@@ -83,47 +86,49 @@ class TeamInfo:
 
 
 @dataclass
-class Market:
-    group_id: int
-    group_name: str
-    bet_group_id: int
-    bet_group_name: str
-    tips: List[Tip]
-
-    @staticmethod
-    def _parse_bet_group_name(bgn: str) -> str:
-        return bgn.replace('#line#', '×')
-
-    @staticmethod
-    def from_json(data: dict) -> Market:
-        try:
-            market = Market(
-                group_id=data['bggi'],
-                group_name=data['bggn'],
-                bet_group_id=data['bgi'],
-                bet_group_name=Market._parse_bet_group_name(data['bgn']),
-                tips=[Tip.from_json(tip) for tip in data['msl']]
-            )
-        except (KeyError, TypeError) as e:
-            raise InvalidApiResponseError(data, e)
-
-        return market
-
-    def __hash__(self):
-        return hash((self.group_id, self.bet_group_id))
-
-
-@dataclass
 class Tip:
     id: int
     name: str
     odds: float
+    market_group_id: int
+    market_group_name: str
+    bet_group_id: int
+    bet_group_name: str
+
+    BGN_TEMPLATE_REGEX = re.compile('#[^#]+#')
+
+    @classmethod
+    def parse_bet_group_name(cls, bgn: str) -> str:
+        if '#' in bgn:
+            return re.sub(cls.BGN_TEMPLATE_REGEX, '×', bgn)
+        else:
+            return bgn
 
     @staticmethod
-    def from_json(data: dict) -> Tip:
+    def from_json(data: dict) -> List[Tip]:
+        tips = []
+
         try:
-            tip = Tip(id=data['msi'], name=data['mst'], odds=data['msp'])
-        except KeyError as e:
+            for market in data['ml']:
+                market_group_id = market['bggi']
+                market_group_name = market['bggn']
+                bet_group_id = market['bgi']
+                bet_group_name = market['bgn'].replace('#line#', '×')
+
+                for tip in market['msl']:
+                    tips.append(Tip(
+                        id=tip['msi'],
+                        name=tip['mst'],
+                        odds=tip['msp'],
+                        market_group_id=market_group_id,
+                        market_group_name=market_group_name,
+                        bet_group_id=bet_group_id,
+                        bet_group_name=bet_group_name
+                    ))
+        except (KeyError, TypeError, ValueError) as e:
             raise InvalidApiResponseError(data, e)
 
-        return tip
+        return tips
+
+    def __hash__(self):
+        return hash((self.market_group_id, self.bet_group_id, self.id))
