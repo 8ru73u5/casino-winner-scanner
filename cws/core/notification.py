@@ -19,12 +19,26 @@ class Notification:
         self.event = updated_event
 
     @property
-    def uptime(self):
+    def uptime_seconds(self) -> int:
+        return int((datetime.now() - self.triggered_on).total_seconds())
+
+    @property
+    def uptime_formatted(self) -> str:
         uptime = datetime.now() - self.triggered_on
         minutes = int(uptime.total_seconds() // 60)
         seconds = int(uptime.total_seconds() % 60)
 
         return f'{minutes:02}:{seconds:02}'
+
+    @property
+    def score(self) -> str:
+        first_team_score = self.event.first_team.score
+        second_team_score = self.event.second_team.score
+
+        if first_team_score is None or second_team_score is None:
+            return '<no score info>'
+        else:
+            return f'{first_team_score}:{second_team_score}'
 
     def to_json(self) -> str:
         n = {
@@ -33,19 +47,15 @@ class Notification:
             'event_id': self.event.id,
             'sport_id': self.event.sport_id,
             'sport_name': self.event.sport_name,
-            'first_team': {
-                'name': self.event.first_team.name,
-                'score': self.event.first_team.score
-            },
-            'second_team': {
-                'name': self.event.second_team.name,
-                'score': self.event.second_team.score
-            },
+            'first_team': self.event.first_team.name,
+            'second_team': self.event.second_team.name,
+            'score': self.score,
             'time': self.event.time_pretty,
             'market_name': self.tip_group[0].market_group_name,
             'bet_name': self.tip_group[0].bet_group_name,
             'tips': [{'name': tip.name, 'odds': tip.odds} for tip in self.tip_group],
-            'uptime': self.uptime
+            'uptime': self.uptime_formatted,
+            'uptime_seconds': self.uptime_seconds
         }
 
         return json.dumps(n, ensure_ascii=False)
