@@ -138,3 +138,12 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+# SCSS/CSS map files
+*.css.map
+
+# SASS cache
+.sass-cache/
+
+# PyCharm project files
+.idea/
