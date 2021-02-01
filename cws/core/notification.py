@@ -29,6 +29,7 @@ class Notification:
     def to_json(self) -> str:
         n = {
             'id': hash(self),
+            'link': self.event.link,
             'event_id': self.event.id,
             'sport_id': self.event.sport_id,
             'sport_name': self.event.sport_name,

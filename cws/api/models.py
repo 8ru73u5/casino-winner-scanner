@@ -36,6 +36,10 @@ class Event:
     def time_pretty(self) -> str:
         return f'{self.minutes:02}:{self.seconds:02}' if self.has_time_info() else '<no time info>'
 
+    @property
+    def link(self):
+        return f'https://www.casinowinner.com/en/live-betting#/event/{self.id}'
+
     @staticmethod
     def from_json(data: dict) -> Event:
         try:
