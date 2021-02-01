@@ -13,21 +13,26 @@ class EventSnapshot:
     event: Event
     timestamp: datetime
 
-    def __init__(self, event: Event, timestamp: datetime):
+    def __init__(self, event: Event, timestamp: datetime, enabled_filters: Dict[int, int]):
         self.snapshot = {}
         self.event = event
         self.timestamp = timestamp
 
-        self._create_snapshot()
+        self._create_snapshot(enabled_filters)
 
-    def _create_snapshot(self):
+    def _create_snapshot(self, enabled_filters: Dict[int, int]):
         for tip in self.event.tips:
+            ident = hash((self.event.sport_id, tip.market_group_id, tip.bet_group_id))
+
+            if ident not in enabled_filters:
+                continue
+
             market_group = self.snapshot.setdefault(tip.market_group_id, {})
             bet_group = market_group.setdefault(tip.bet_group_id, {})
             bet_group[tip.id] = TipSnapshot(tip)
 
     def update(self, old_snapshot: EventSnapshot):
-        time_between_updates = (self.timestamp - old_snapshot.timestamp).seconds
+        time_between_updates = int((self.timestamp - old_snapshot.timestamp).total_seconds())
 
         for market_id, bets in self.snapshot.items():
             for bet_id, tip_snapshots in bets.items():
@@ -57,4 +62,4 @@ class TipSnapshot:
         if self.tip.odds != old_snapshot.tip.odds:
             self.time_since_last_change = 0
         else:
-            self.time_since_last_change += time_between_updates
+            self.time_since_last_change = old_snapshot.time_since_last_change + time_between_updates
