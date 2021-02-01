@@ -6,6 +6,9 @@ from cws.config import AppConfig
 from cws.core.scanner import Scanner
 from cws.database import SessionLocal
 from cws.redis_manager import RedisManager
+from cws.views.app import bp as app_bp
+from cws.views.config import bp as config_bp
+from cws.views.auth import bp as auth_bp
 
 
 def init_app(launch_core: bool = True):
@@ -26,6 +29,11 @@ def init_app(launch_core: bool = True):
         scheduler = APScheduler(app=app)
         scheduler.add_job(func=scanner.cycle, trigger='interval', seconds=5, id='Scanner cycle')
         scheduler.start()
+
+    # Blueprints
+    app.register_blueprint(app_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(config_bp)
 
     return app
 
