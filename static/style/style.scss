@@ -1,0 +1,170 @@
+$black: #343434;
+
+$uptimeAdded: #6cb4ee;
+$uptimeShort: #3eb489;
+$uptimeMedium: #ff7538;
+$uptimeLong: #9370db;
+
+$dangerRed: #ed2939;
+
+$desktop: 960px;
+
+
+#notifications-container {
+  @media (max-width: $desktop) {
+    font-size: 12px;
+  }
+
+  @media (min-width: $desktop) {
+    font-size: 15px;
+  }
+
+  padding: 0 1rem;
+  margin-bottom: 3rem;
+
+  .notification {
+    position: relative;
+    overflow: hidden;
+    background-color: white;
+    transition: box-shadow .5s ease-out, opacity 3s, margin 1.5s ease-in, padding 1.5s ease-in, max-height 2.5s ease-in;
+    z-index: 1;
+
+    padding: .5em 5em .5em .5em;
+    margin: 1em auto;
+
+    &::before {
+      content: "";
+
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 1s linear;
+    }
+
+    &.uptime-short {
+      &::before {
+        background-image: linear-gradient(to left, $uptimeShort, white 20%);
+        opacity: 1;
+      }
+    }
+
+    &.uptime-medium {
+      background-image: linear-gradient(to left, $uptimeMedium, white 20%);
+
+      &::before {
+        background-image: linear-gradient(to left, $uptimeShort, white 20%);
+        opacity: 0;
+      }
+    }
+
+    &.uptime-long {
+      background-image: linear-gradient(to left, $uptimeMedium, white 20%);
+
+      &::before {
+        background-image: linear-gradient(to left, $uptimeLong, white 20%);
+        opacity: 1;
+      }
+    }
+
+    &.added {
+      box-shadow: 0 0 1em .5em rgba(144, 238, 144, 0.4)
+    }
+
+    &.updated {
+      box-shadow: 0 0 1em .5em rgba(135, 206, 250, 0.4);
+    }
+
+    &.removed {
+      box-shadow: 0 0 1em .5em rgba(240, 128, 128, 0.4);
+      opacity: 0;
+      max-height: 0 !important;
+      margin-top: 0;
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+
+    .n--uptime {
+      position: absolute;
+      right: 0;
+      top: 0;
+
+      font-size: 1.3em;
+      margin: 0.5rem 0.5rem 0 0;
+    }
+
+    .title {
+      font-size: 1.1em;
+      margin-bottom: 0.2em;
+    }
+
+    .content {
+      font-size: 1em;
+
+      @media (min-width: $desktop) {
+        display: flex;
+        align-items: center;
+      }
+
+      .notification-item {
+        .title {
+          font-size: 1em;
+          margin-right: 0.5em;
+          margin-bottom: 0;
+        }
+
+        @media (min-width: $desktop) {
+          display: flex;
+          align-items: center;
+
+          width: 20%;
+
+          &:nth-child(1) {
+            width: 7%;
+          }
+
+          &:nth-child(2) {
+            width: 13%;
+          }
+
+          &:nth-child(3) {
+            width: 40%;
+          }
+
+          &:nth-child(4) {
+            width: 40%;
+          }
+        }
+
+        @media (max-width: $desktop) {
+          div {
+            display: inline;
+          }
+        }
+      }
+
+      p {
+        margin-bottom: 0.2em;
+      }
+
+      ul {
+        list-style: '\02192' inside;
+        margin: 0;
+
+        li {
+          margin: 0;
+
+          i {
+            margin-left: 0.3em;
+            color: $dangerRed;
+          }
+        }
+      }
+    }
+  }
+}
