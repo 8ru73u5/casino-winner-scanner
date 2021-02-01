@@ -1,5 +1,25 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  Login page
+  <form class="container has-text-centered" method="post">
+    <div class="field">
+      <label class="label" for="username">
+        Username
+      </label>
+      <div class="control">
+        <input type="text" name="username" id="username" required><br>
+      </div>
+    </div>
+    <div class="field">
+      <label class="label" for="password">
+        Password
+      </label>
+      <div class="control">
+        <input type="password" name="password" id="password" required><br>
+      </div>
+    </div>
+    <div class="control">
+      <input class="button" type="submit" value="Log in">
+    </div>
+  </form>
 {% endblock %}
