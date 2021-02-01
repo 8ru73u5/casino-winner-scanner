@@ -11,6 +11,8 @@ class AppConfig:
         CASINO_ADMIN_USER = 'CASINO_ADMIN_USER', str
         CASINO_ADMIN_PASS = 'CASINO_ADMIN_PASS', str
         DATABASE_URL = 'CASINO_DATABASE_URL', str
+        REDIS_HOST = 'REDIS_HOST', str
+        REDIS_PORT = 'REDIS_PORT', int
 
     _vars = {}
     _loaded = False
