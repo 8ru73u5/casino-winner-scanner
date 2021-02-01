@@ -1,5 +1,23 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  Main page
+  {% if g.admin %}
+    <div id="notifications-container" class="container is-fluid"></div>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  {% if g.admin %}
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="{{ url_for('static', filename='js/notificationComponent.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notificationManager.js') }}"></script>
+
+    <script>
+        const notificationManager = new NotificationManager();
+
+        setInterval(async () => {
+            await notificationManager.fetchNotifications();
+        }, 5000);
+    </script>
+  {% endif %}
 {% endblock %}
