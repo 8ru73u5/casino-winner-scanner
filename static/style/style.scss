@@ -10,6 +10,98 @@ $dangerRed: #ed2939;
 $desktop: 960px;
 
 
+#filters {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+
+  margin: 3rem 0;
+  width: 100%;
+
+  .config-item-list {
+    .config-navigator {
+      padding-left: .5em;
+      cursor: pointer;
+    }
+
+    padding: 1rem 0;
+    box-shadow: 0 0 .5rem 0 rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+
+    @media (max-width: $desktop) {
+      width: 90%;
+      margin-bottom: 1rem;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+    }
+
+    @media (min-width: $desktop) {
+      width: 30%;
+      margin-right: 1rem;
+
+      &:last-of-type {
+        margin-right: 0;
+      }
+    }
+
+    ul {
+      @media (max-width: $desktop) {
+        min-height: 2rem;
+        max-height: 75vh;
+      }
+
+      @media (min-width: $desktop) {
+        height: 75vh;
+      }
+
+      overflow-y: auto;
+    }
+
+    li {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+
+      span {
+        display: flex;
+        align-items: center;
+      }
+
+      //noinspection CssInvalidPropertyValue
+      input[type=number] {
+        width: -moz-available;
+        width: -webkit-fill-available;
+
+        &[readonly] {
+          background-color: rgba(237, 41, 57, 0.2);
+        }
+      }
+
+      input[type=checkbox] {
+        margin: auto;
+      }
+
+      &.selectable {
+        span {
+          cursor: pointer;
+        }
+
+        &:hover {
+          background-color: lightsteelblue;
+        }
+
+        &.active {
+          background-color: lightgreen;
+          font-weight: bold;
+        }
+      }
+    }
+  }
+}
+
+
 #notifications-container {
   @media (max-width: $desktop) {
     font-size: 12px;

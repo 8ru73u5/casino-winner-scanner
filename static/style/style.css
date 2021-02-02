@@ -1,3 +1,59 @@
+#filters {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 3rem 0;
+  width: 100%; }
+  #filters .config-item-list {
+    padding: 1rem 0;
+    box-shadow: 0 0 0.5rem 0 rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(0, 0, 0, 0.1); }
+    #filters .config-item-list .config-navigator {
+      padding-left: .5em;
+      cursor: pointer; }
+    @media (max-width: 960px) {
+      #filters .config-item-list {
+        width: 90%;
+        margin-bottom: 1rem; }
+        #filters .config-item-list:last-of-type {
+          margin-bottom: 0; } }
+    @media (min-width: 960px) {
+      #filters .config-item-list {
+        width: 30%;
+        margin-right: 1rem; }
+        #filters .config-item-list:last-of-type {
+          margin-right: 0; } }
+    #filters .config-item-list ul {
+      overflow-y: auto; }
+      @media (max-width: 960px) {
+        #filters .config-item-list ul {
+          min-height: 2rem;
+          max-height: 75vh; } }
+      @media (min-width: 960px) {
+        #filters .config-item-list ul {
+          height: 75vh; } }
+    #filters .config-item-list li {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px; }
+      #filters .config-item-list li span {
+        display: flex;
+        align-items: center; }
+      #filters .config-item-list li input[type=number] {
+        width: -moz-available;
+        width: -webkit-fill-available; }
+        #filters .config-item-list li input[type=number][readonly] {
+          background-color: rgba(237, 41, 57, 0.2); }
+      #filters .config-item-list li input[type=checkbox] {
+        margin: auto; }
+      #filters .config-item-list li.selectable span {
+        cursor: pointer; }
+      #filters .config-item-list li.selectable:hover {
+        background-color: lightsteelblue; }
+      #filters .config-item-list li.selectable.active {
+        background-color: lightgreen;
+        font-weight: bold; }
+
 #notifications-container {
   padding: 0 1rem;
   margin-bottom: 3rem; }
