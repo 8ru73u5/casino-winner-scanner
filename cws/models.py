@@ -14,6 +14,14 @@ class Sport(Base):
     is_enabled = Column(Boolean, nullable=False, default=True)
     trigger_time = Column(Integer, nullable=False, default=300)
 
+    def to_json(self) -> dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'is_enabled': self.is_enabled,
+            'trigger_time': self.trigger_time
+        }
+
     def __repr__(self):
         return f'<[{"+" if self.is_enabled else "-"}] Sport: {self.name}>'
 
@@ -32,6 +40,14 @@ class Market(Base):
     sport_id = Column(Integer, ForeignKey('sports.id'), primary_key=True)
 
     sport = relationship('Sport', lazy=False)
+
+    def to_json(self) -> dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'is_enabled': self.is_enabled,
+            'trigger_time': self.trigger_time
+        }
 
     def __repr__(self):
         return f'<[{"+" if self.is_enabled else "-"}] Market: {self.name}>'
@@ -58,6 +74,13 @@ class Bet(Base):
     market_id = Column(Integer, primary_key=True)
 
     market = relationship('Market', lazy=False, foreign_keys=[sport_id, market_id])
+
+    def to_json(self) -> dict:
+        return {
+            'id': self.id,
+            'name': self.name,
+            'is_enabled': self.is_enabled
+        }
 
     def __repr__(self):
         return f'<[{"+" if self.is_enabled else "-"}] Bet: {self.name}>'
