@@ -44,6 +44,7 @@ class Market(Base):
     def to_json(self) -> dict:
         return {
             'id': self.id,
+            'sport_id': self.sport_id,
             'name': self.name,
             'is_enabled': self.is_enabled,
             'trigger_time': self.trigger_time
@@ -78,6 +79,8 @@ class Bet(Base):
     def to_json(self) -> dict:
         return {
             'id': self.id,
+            'sport_id': self.sport_id,
+            'market_id': self.market_id,
             'name': self.name,
             'is_enabled': self.is_enabled
         }

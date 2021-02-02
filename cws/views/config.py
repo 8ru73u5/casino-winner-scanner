@@ -91,7 +91,7 @@ def get_bets():
 @bp.route('/sports', methods=('PATCH',))
 def set_sport_data():
     try:
-        sport_id = int(request.json['sport_id'])
+        sport_id = int(request.json['id'])
         is_enabled = request.json['is_enabled']
         trigger_time = int(request.json['trigger_time'])
     except (KeyError, ValueError):
@@ -130,7 +130,7 @@ def set_sport_data():
 def set_market_data():
     try:
         sport_id = int(request.json['sport_id'])
-        market_id = int(request.json['market_id'])
+        market_id = int(request.json['id'])
         is_enabled = request.json['is_enabled']
         trigger_time = request.json['trigger_time']
     except (KeyError, ValueError):
@@ -178,7 +178,7 @@ def set_bet_data():
     try:
         sport_id = int(request.json['sport_id'])
         market_id = int(request.json['market_id'])
-        bet_id = int(request.json['bet_id'])
+        bet_id = int(request.json['id'])
         is_enabled = request.json['is_enabled']
     except (KeyError, ValueError):
         return '', 400
