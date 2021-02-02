@@ -44,11 +44,15 @@ class NotificationManager {
             }
         });
 
-        this._addNotifications(newNotificationsData);
+        this._addNotifications(newNotificationsData.sort((a, b) => b.uptime_seconds - a.uptime_seconds));
         this._updateNotifications(updatedNotificationsData);
         this._removeNotifications(removedNotifications);
 
         this.updateLock = false;
+
+        if (response.data.notifications.length !== this.notifications.length && response.data.notifications.length !== this.notificationsIds.size) {
+            alert(`O kurwa! ${response.data.notifications.length}, ${this.notifications.length}, ${this.notificationsIds.size}`);
+        }
     }
 
     _addNotifications(notificationsData) {
@@ -77,6 +81,7 @@ class NotificationManager {
         notificationsComponents.forEach(nComponent => {
             nComponent.removeFromDOM();
             removedNotificationIds.add(nComponent.id);
+            this.notificationsIds.delete(nComponent.id);
         });
 
         this.notifications = this.notifications.filter(n => !removedNotificationIds.has(n.id));

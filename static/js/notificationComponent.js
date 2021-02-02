@@ -27,23 +27,6 @@ class NotificationComponent {
       </a>
     `;
 
-    static $gameEmoji = {
-        1: '⚽️',
-        2: '🏒',
-        3: '🤾',
-        4: '🏀',
-        8: '🏉',
-        9: '🏐',
-        11: '🎾',
-        15: '⛳',
-        17: '🎱',
-        26: '🏏',
-        34: '🎯',
-        92: '❄',
-        119: '🎮',
-        138: '🏓'
-    };
-
     static $soundMinUptime = Infinity;
     static $notificationSound = new Audio('static/sounds/snap.ogg');
 
@@ -60,10 +43,6 @@ class NotificationComponent {
         this._setNotificationData(data);
     }
 
-    _getEmojiOrName(sportId, sportName) {
-        return NotificationComponent.$gameEmoji[sportId] || `<i>${sportName}:</i>`;
-    }
-
     _setUptime(uptimeSeconds, uptimeFormatted) {
         this.root.querySelector('.n--uptime').innerText = uptimeFormatted;
 
@@ -74,7 +53,7 @@ class NotificationComponent {
         } else if (uptimeSeconds < 300) {
             this.root.classList.remove('uptime-short');
             this.root.classList.add('uptime-medium');
-        } else if (uptimeSeconds < 900) {
+        } else {
             this.root.classList.remove('uptime-medium');
             this.root.classList.add('uptime-long');
         }
@@ -112,7 +91,7 @@ class NotificationComponent {
 
         this.root.href = data.link;
 
-        this.root.querySelector('.n--emoji').innerHTML = this._getEmojiOrName(data.sport_id, data.sport_name);
+        this.root.querySelector('.n--emoji').innerHTML = data.sport_name;
         this.root.querySelector('.n--game').innerText = `${data.first_team} vs ${data.second_team}`;
         this.root.querySelector('.n--bet').innerText = data.bet_name;
 
