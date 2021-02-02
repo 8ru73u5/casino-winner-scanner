@@ -49,10 +49,6 @@ class NotificationManager {
         this._removeNotifications(removedNotifications);
 
         this.updateLock = false;
-
-        if (response.data.notifications.length !== this.notifications.length && response.data.notifications.length !== this.notificationsIds.size) {
-            alert(`O kurwa! ${response.data.notifications.length}, ${this.notifications.length}, ${this.notificationsIds.size}`);
-        }
     }
 
     _addNotifications(notificationsData) {
