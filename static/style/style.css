@@ -75,9 +75,9 @@
           align-items: center;
           width: 20%; }
           #notifications-container .notification .content .notification-item:nth-child(1) {
-            width: 7%; }
+            width: 10%; }
           #notifications-container .notification .content .notification-item:nth-child(2) {
-            width: 13%; }
+            width: 10%; }
           #notifications-container .notification .content .notification-item:nth-child(3) {
             width: 40%; }
           #notifications-container .notification .content .notification-item:nth-child(4) {
@@ -92,8 +92,5 @@
         margin: 0; }
         #notifications-container .notification .content ul li {
           margin: 0; }
-          #notifications-container .notification .content ul li i {
-            margin-left: 0.3em;
-            color: #ed2939; }
 
 /*# sourceMappingURL=style.css.map */

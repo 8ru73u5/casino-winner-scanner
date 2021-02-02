@@ -125,11 +125,11 @@ $desktop: 960px;
           width: 20%;
 
           &:nth-child(1) {
-            width: 7%;
+            width: 10%;
           }
 
           &:nth-child(2) {
-            width: 13%;
+            width: 10%;
           }
 
           &:nth-child(3) {
@@ -158,11 +158,6 @@ $desktop: 960px;
 
         li {
           margin: 0;
-
-          i {
-            margin-left: 0.3em;
-            color: $dangerRed;
-          }
         }
       }
     }
