@@ -11,6 +11,7 @@ from .errors import InvalidApiResponseError
 class Event:
     id: int
     time: Optional[Tuple[int, int]]  # (minutes, seconds)
+    game_phase: str
     sport_id: int
     sport_name: str
     league_name: str
@@ -18,23 +19,46 @@ class Event:
     second_team: TeamInfo
     tips: List[Tip]
 
+    SPORT_EMOJI = {
+        1: '⚽️',
+        2: '🏒',
+        3: '🤾',
+        4: '🏀',
+        8: '🏉',
+        9: '🏐',
+        11: '🎾',
+        15: '⛳',
+        17: '🎱',
+        26: '🏏',
+        34: '🎯',
+        92: '❄',
+        119: '🎮',
+        138: '🏓'
+    }
+
     def has_time_info(self) -> bool:
         return self.time is not None
 
     def has_score_info(self) -> bool:
         return self.first_team.score is not None and self.second_team.score is not None
 
-    @property
-    def minutes(self) -> Optional[int]:
-        return self.time[0] if self.has_time_info() else None
+    def get_time_or_phase(self) -> str:
+        if self.has_time_info():
+            minutes, seconds = self.time
+            return f'{minutes:02}:{seconds:02}'
+        elif self.game_phase is not None:
+            return self.game_phase
+        else:
+            return '―'
 
-    @property
-    def seconds(self) -> Optional[int]:
-        return self.time[1] if self.has_time_info() else None
+    def get_score(self) -> str:
+        if self.has_score_info():
+            return f'{self.first_team.score}:{self.second_team.score}'
+        else:
+            return '―'
 
-    @property
-    def time_pretty(self) -> str:
-        return f'{self.minutes:02}:{self.seconds:02}' if self.has_time_info() else '<no time info>'
+    def get_sport_name_or_emoji(self) -> str:
+        return Event.SPORT_EMOJI.get(self.sport_id) or self.sport_name
 
     @property
     def link(self):
@@ -52,12 +76,15 @@ class Event:
                 time = (data['sb']['gmc']['m'], data['sb']['gmc']['s'])
                 if time == (0, 0):
                     time = None
+                game_phase = data['sb']['gcp']['gpn']
             else:
                 time = None
+                game_phase = None
 
             event = Event(
                 id=data['ei'],
                 time=time,
+                game_phase=game_phase,
                 sport_id=data['ci'],
                 sport_name=data['cn'],
                 league_name=data['scn'],
@@ -65,7 +92,7 @@ class Event:
                 second_team=TeamInfo(name=data['epl'][1]['pn'], score=team2_score),
                 tips=Tip.from_json(data)
             )
-        except (KeyError, ValueError, IndexError) as e:
+        except (KeyError, ValueError, IndexError, TypeError) as e:
             raise InvalidApiResponseError(data, e)
 
         return event
@@ -98,13 +125,14 @@ class Tip:
     market_group_name: str
     bet_group_id: int
     bet_group_name: str
+    bet_group_name_real: str
 
     BGN_TEMPLATE_REGEX = re.compile('#[^#]+#')
 
     @classmethod
     def parse_bet_group_name(cls, bgn: str) -> str:
         if '#' in bgn:
-            return re.sub(cls.BGN_TEMPLATE_REGEX, '×', bgn)
+            return re.sub(cls.BGN_TEMPLATE_REGEX, '∅', bgn)
         else:
             return bgn
 
@@ -117,7 +145,8 @@ class Tip:
                 market_group_id = market['bggi']
                 market_group_name = market['bggn']
                 bet_group_id = market['bgi']
-                bet_group_name = market['bgn'].replace('#line#', '×')
+                bet_group_name = Tip.parse_bet_group_name(market['bgn'])
+                bet_group_name_real = market['mn']
 
                 for tip in market['msl']:
                     tips.append(Tip(
@@ -127,7 +156,8 @@ class Tip:
                         market_group_id=market_group_id,
                         market_group_name=market_group_name,
                         bet_group_id=bet_group_id,
-                        bet_group_name=bet_group_name
+                        bet_group_name=bet_group_name,
+                        bet_group_name_real=bet_group_name_real
                     ))
         except (KeyError, TypeError, ValueError) as e:
             raise InvalidApiResponseError(data, e)

@@ -30,29 +30,16 @@ class Notification:
 
         return f'{minutes:02}:{seconds:02}'
 
-    @property
-    def score(self) -> str:
-        first_team_score = self.event.first_team.score
-        second_team_score = self.event.second_team.score
-
-        if first_team_score is None or second_team_score is None:
-            return '<no score info>'
-        else:
-            return f'{first_team_score}:{second_team_score}'
-
     def to_json(self) -> str:
         n = {
             'id': hash(self),
             'link': self.event.link,
-            'event_id': self.event.id,
-            'sport_id': self.event.sport_id,
-            'sport_name': self.event.sport_name,
+            'sport_name': self.event.get_sport_name_or_emoji(),
             'first_team': self.event.first_team.name,
             'second_team': self.event.second_team.name,
-            'score': self.score,
-            'time': self.event.time_pretty,
-            'market_name': self.tip_group[0].market_group_name,
-            'bet_name': self.tip_group[0].bet_group_name,
+            'score': self.event.get_score(),
+            'time': self.event.get_time_or_phase(),
+            'bet_name': self.tip_group[0].bet_group_name_real,
             'tips': [{'name': tip.name, 'odds': tip.odds} for tip in self.tip_group],
             'uptime': self.uptime_formatted,
             'uptime_seconds': self.uptime_seconds
