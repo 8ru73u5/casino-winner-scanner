@@ -12,6 +12,7 @@ from sqlalchemy.sql.functions import coalesce
 from cws.api.casino_winner import CasinoWinnerApi as Api
 from cws.api.models import Event
 from cws.core.notification import Notification
+from cws.core.notifier import TelegramNotifier
 from cws.core.snapshots import EventSnapshot
 from cws.models import Sport, Market, Bet, AppOption
 from cws.redis_manager import RedisManager
@@ -25,10 +26,13 @@ class Scanner:
     notifications: Dict[int, Notification]
     min_odds: float
     max_odds: float
+    telegram_notification_min_uptime: int
+    telegram_notifier: TelegramNotifier
 
     def __init__(self, session: Session):
         self.session = session
         self.redis_manager = RedisManager()
+        self.telegram_notifier = TelegramNotifier()
 
         self._load_enabled_filters()
         self._load_odds_options()
@@ -129,6 +133,7 @@ class Scanner:
         try:
             self.min_odds = AppOption.get_option(AppOption.OptionType.MIN_ODDS, self.session)
             self.max_odds = AppOption.get_option(AppOption.OptionType.MAX_ODDS, self.session)
+            self.telegram_notification_min_uptime = AppOption.get_option(AppOption.OptionType.TELEGRAM_NOTIFICATION_MIN_UPTIME, self.session)
         except SQLAlchemyError as e:
             db_error = e
             self.session.rollback()
@@ -197,3 +202,15 @@ class Scanner:
 
         self.notifications = notifications
         self.redis_manager.set_notifications(notifications.values())
+
+        self._send_telegram_notification()
+
+    def _send_telegram_notification(self):
+        to_send = []
+
+        for n in self.notifications.values():
+            if not n.notification_sent and n.uptime_seconds >= self.telegram_notification_min_uptime:
+                n.notification_sent = True
+                to_send.append(n)
+
+        self.telegram_notifier.send_notifications(to_send)

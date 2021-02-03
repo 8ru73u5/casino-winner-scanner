@@ -13,6 +13,8 @@ class AppConfig:
         DATABASE_URL = 'CASINO_DATABASE_URL', str
         REDIS_HOST = 'REDIS_HOST', str
         REDIS_PORT = 'REDIS_PORT', int
+        TELEGRAM_TOKEN = 'CWS_TELEGRAM_TOKEN', str
+        TELEGRAM_CHAT_ID = 'CWS_TELEGRAM_CHAT_ID', str
 
     _vars = {}
     _loaded = False
