@@ -23,6 +23,7 @@ def init_app(launch_core: bool = True):
 
     if launch_core:
         # Core
+        # noinspection PyTypeChecker
         scanner = Scanner(scoped_session(SessionLocal))
 
         # Scheduler
