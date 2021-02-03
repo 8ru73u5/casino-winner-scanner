@@ -142,6 +142,9 @@ class AppOption(Base):
         except:
             return False
 
+    def set_value(self, new_value: Any):
+        self.value['value'] = new_value
+
     @staticmethod
     def get_option(option_type: AppOption.OptionType, session: Session) -> Optional[Any]:
         o = session.query(AppOption).get(option_type.value['id'])
