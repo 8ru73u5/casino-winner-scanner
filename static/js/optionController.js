@@ -38,7 +38,7 @@ class OptionItemComponent {
 
     _updateOptionData() {
         axios.patch(this._getOptionUrl(), {
-            value: this.inputField.value
+            value: parseFloat(this.inputField.value)
         }).catch(e => console.error('While updating option data:', e));
     }
 
