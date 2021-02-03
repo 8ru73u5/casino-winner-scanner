@@ -6,29 +6,32 @@ from typing import Dict, List
 from sqlalchemy import and_
 from sqlalchemy.dialects.postgresql import insert as psql_insert
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import Session
 from sqlalchemy.sql.functions import coalesce
 
 from cws.api.casino_winner import CasinoWinnerApi as Api
 from cws.api.models import Event
 from cws.core.notification import Notification
 from cws.core.snapshots import EventSnapshot
-from cws.models import Sport, Market, Bet
+from cws.models import Sport, Market, Bet, AppOption
 from cws.redis_manager import RedisManager
 
 
 class Scanner:
-    session: scoped_session
+    session: Session
     redis_manager: RedisManager
     event_snapshots: Dict[int, EventSnapshot]
     enabled_filters: Dict[int, int]
     notifications: Dict[int, Notification]
+    min_odds: float
+    max_odds: float
 
-    def __init__(self, session: scoped_session):
+    def __init__(self, session: Session):
         self.session = session
         self.redis_manager = RedisManager()
 
         self._load_enabled_filters()
+        self._load_odds_options()
         self.notifications = {}
 
         events, timestamp = Api.get_all_live_events()
@@ -39,6 +42,7 @@ class Scanner:
 
         self._update_database(events)
         self._load_enabled_filters()
+        self._load_odds_options()
 
         new_event_snapshots = self._make_snapshots(events, timestamp)
         self._update_snapshots(new_event_snapshots)
@@ -119,6 +123,21 @@ class Scanner:
         if db_error is not None:
             raise db_error
 
+    def _load_odds_options(self):
+        db_error = None
+
+        try:
+            self.min_odds = AppOption.get_option(AppOption.OptionType.MIN_ODDS, self.session)
+            self.max_odds = AppOption.get_option(AppOption.OptionType.MAX_ODDS, self.session)
+        except SQLAlchemyError as e:
+            db_error = e
+            self.session.rollback()
+        finally:
+            self.session.close()
+
+        if db_error is not None:
+            raise db_error
+
     def _generate_notifications(self):
         new_notifications = []
         updated_notifications = []
@@ -141,7 +160,11 @@ class Scanner:
                     tips = [ts.tip for ts in tip_snapshots.values()]
                     is_market_active = tips[0].is_active
 
-                    if is_market_active and min_idle_time >= trigger_time:
+                    min_market_odds = min(t.odds for t in tips)
+                    max_market_odds = max(t.odds for t in tips)
+
+                    if is_market_active and min_idle_time >= trigger_time \
+                            and min_market_odds >= self.min_odds and max_market_odds <= self.max_odds:
                         if notification_hash in self.notifications:
                             updated_notifications.append((notification_hash, event_snapshot.event))
                         else:
