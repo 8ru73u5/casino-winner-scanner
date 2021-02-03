@@ -14,6 +14,7 @@
 
     <script>
         const notificationManager = new NotificationManager();
+        NotificationComponent.getSoundMinUptime();
 
         setInterval(async () => {
             await notificationManager.fetchNotifications();

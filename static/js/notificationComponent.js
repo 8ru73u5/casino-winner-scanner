@@ -121,4 +121,15 @@ class NotificationComponent {
         this.root.style.setProperty('max-height', this.root.offsetHeight);
         setTimeout(() => NotificationComponent.$hook.removeChild(this.root), 3000);
     }
+
+    static async getSoundMinUptime() {
+        let response;
+        try {
+            response = await axios.get('/config/option/4');
+        } catch (e) {
+            console.error('While fetching sound min uptime:', e);
+        }
+
+        NotificationComponent.$soundMinUptime = response.data.value;
+    }
 }
