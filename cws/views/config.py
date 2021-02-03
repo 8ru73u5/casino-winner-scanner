@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, current_app, request
 from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm.attributes import flag_modified
 
 from cws.models import Sport, Market, Bet, AppOption
 
@@ -252,8 +253,8 @@ def set_option(option_id):
         if existing_option is None:
             not_found_error = True
         else:
-            existing_option: AppOption
             existing_option.set_value(option_value)
+            flag_modified(existing_option, 'value')
 
             if existing_option.check():
                 current_app.session.commit()
