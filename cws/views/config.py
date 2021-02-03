@@ -18,7 +18,7 @@ def get_sports():
     sports = []
 
     try:
-        sports = [sport.to_json() for sport in current_app.session.query(Sport).all()]
+        sports = [sport.to_json() for sport in current_app.session.query(Sport).order_by(Sport.id).all()]
     except SQLAlchemyError:
         db_error = True
         current_app.session.rollback()
@@ -44,7 +44,9 @@ def get_markets():
     try:
         markets = [
             market.to_json()
-            for market in current_app.session.query(Market).filter(Market.sport_id == sport_id).all()
+            for market in current_app.session.query(Market).filter(
+                Market.sport_id == sport_id
+            ).order_by(Market.id).all()
         ]
     except SQLAlchemyError:
         db_error = True
@@ -74,7 +76,7 @@ def get_bets():
             bet.to_json()
             for bet in current_app.session.query(Bet).filter(and_(
                 Bet.sport_id == sport_id, Bet.market_id == market_id
-            )).all()
+            )).order_by(Bet.id).all()
         ]
     except SQLAlchemyError:
         db_error = True
