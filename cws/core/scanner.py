@@ -138,11 +138,14 @@ class Scanner:
                     min_idle_time = min(snapshot.time_since_last_change for _, snapshot in tip_snapshots.items())
                     notification_hash = hash((event_id, market_id, bet_id))
 
-                    if min_idle_time >= trigger_time:
+                    tips = [ts.tip for ts in tip_snapshots.values()]
+                    is_market_active = tips[0].is_active
+
+                    if is_market_active and min_idle_time >= trigger_time:
                         if notification_hash in self.notifications:
                             updated_notifications.append((notification_hash, event_snapshot.event))
                         else:
-                            event_new_notifications.append(Notification(event_snapshot.event, [ts.tip for ts in tip_snapshots.values()]))
+                            event_new_notifications.append(Notification(event_snapshot.event, tips))
 
                     if min_idle_time < 120:
                         event_is_frozen = False

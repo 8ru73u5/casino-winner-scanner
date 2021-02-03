@@ -126,6 +126,7 @@ class Tip:
     bet_group_id: int
     bet_group_name: str
     bet_group_name_real: str
+    is_active: bool
 
     BGN_TEMPLATE_REGEX = re.compile('#[^#]+#')
 
@@ -147,6 +148,7 @@ class Tip:
                 bet_group_id = market['bgi']
                 bet_group_name = Tip.parse_bet_group_name(market['bgn'])
                 bet_group_name_real = market['mn']
+                is_active = market['ms'] == 10
 
                 for tip in market['msl']:
                     tips.append(Tip(
@@ -157,7 +159,8 @@ class Tip:
                         market_group_name=market_group_name,
                         bet_group_id=bet_group_id,
                         bet_group_name=bet_group_name,
-                        bet_group_name_real=bet_group_name_real
+                        bet_group_name_real=bet_group_name_real,
+                        is_active=is_active
                     ))
         except (KeyError, TypeError, ValueError) as e:
             raise InvalidApiResponseError(data, e)
