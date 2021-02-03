@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, current_app, request
 from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
-from cws.models import Sport, Market, Bet
+from cws.models import Sport, Market, Bet, AppOption
 
 bp = Blueprint('config', __name__, url_prefix='/config')
 
@@ -211,5 +211,65 @@ def set_bet_data():
         return '', 500
     elif not_found_error:
         return '', 404
+    else:
+        return ''
+
+
+@bp.route('/option/<int:option_id>')
+def get_option(option_id):
+    db_error = False
+
+    option = None
+    try:
+        option = current_app.session.query(AppOption).get(option_id)
+    except SQLAlchemyError:
+        db_error = True
+        current_app.session.rollback()
+    finally:
+        current_app.session.close()
+
+    if db_error:
+        return '', 500
+    elif option is None:
+        return '', 404
+    else:
+        return option.value
+
+
+@bp.route('/option/<int:option_id>', methods=('PATCH',))
+def set_option(option_id):
+    try:
+        option_value = request.json['value']
+    except KeyError:
+        return '', 400
+
+    db_error = False
+    not_found_error = False
+    check_failed_error = False
+
+    try:
+        existing_option = current_app.session.query(AppOption).get(option_id)
+        if existing_option is None:
+            not_found_error = True
+        else:
+            existing_option: AppOption
+            existing_option.set_value(option_value)
+
+            if existing_option.check():
+                current_app.session.commit()
+            else:
+                check_failed_error = True
+    except SQLAlchemyError:
+        db_error = True
+        current_app.session.rollback()
+    finally:
+        current_app.session.close()
+
+    if db_error:
+        return '', 500
+    elif not_found_error:
+        return '', 404
+    elif check_failed_error:
+        return '', 400
     else:
         return ''
