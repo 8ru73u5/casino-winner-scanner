@@ -313,6 +313,3 @@ document.querySelectorAll('.config-navigator').forEach(element => {
     });
 });
 
-document.addEventListener('readystatechange', async () => {
-    await SportComponent.getAllSports();
-});

@@ -1,25 +1,96 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <div id="filters">
-    <div id="sports" class="config-item-list">
-      <h1 class="is-size-3 has-text-centered">Sports</h1>
-      <hr>
-      <ul id="sport-list"></ul>
+  <div class="container p-4">
+    <div id="app-options" class="columns is-justify-content-center">
+      <div class="column is-one-quarter">
+        <div class="columns is-flex-wrap-wrap">
+          <div class="column is-full">
+            <h3 class="is-size-4 has-text-centered">Odd options</h3>
+            <hr>
+          </div>
+          <div class="field column is-full">
+            <div class="field-label is-normal has-text-left">
+              <label class="label" for="option-min-odds"></label>
+            </div>
+            <div class="field-body">
+              <div class="field">
+                <p class="control">
+                  <input id="option-min-odds" class="input" type="number" min="1.0" step="0.05">
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="field column is-full">
+            <div class="field-label is-normal has-text-left">
+              <label class="label" for="option-max-odds"></label>
+            </div>
+            <div class="field-body">
+              <div class="field">
+                <p class="control">
+                  <input id="option-max-odds" class="input" type="number" min="1.1" step="0.05">
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="column is-one-quarter">
+        <div class="columns is-flex-wrap-wrap">
+          <div class="column is-full">
+            <h3 class="is-size-4 has-text-centered">Notification options</h3>
+            <hr>
+          </div>
+          <div class="field column is-full">
+            <div class="field-label is-normal has-text-left">
+              <label class="label" for="option-telegram-notification"></label>
+            </div>
+            <div class="field-body">
+              <div class="field">
+                <p class="control">
+                  <input id="option-telegram-notification" class="input" type="number" min="5" step="5">
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="field column is-full">
+            <div class="field-label is-normal has-text-left">
+              <label class="label" for="option-sound-notification"></label>
+            </div>
+            <div class="field-body">
+              <div class="field">
+                <p class="control">
+                  <input id="option-sound-notification" class="input" type="number" min="5" step="5">
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div id="markets" class="config-item-list">
-      <h1 class="is-size-3 has-text-centered">
-        Markets<i class="config-navigator fas fa-level-up-alt is-hidden-desktop" data-target="sports"></i>
-      </h1>
-      <hr>
-      <ul id="market-list"></ul>
-    </div>
-    <div id="bets" class="config-item-list">
-      <h1 class="is-size-3 has-text-centered">
-        Bets<i class="config-navigator fas fa-level-up-alt is-hidden-desktop" data-target="markets"></i>
-      </h1>
-      <hr>
-      <ul id="bet-list"></ul>
+  </div>
+
+  <div class="container">
+    <div id="filters">
+      <div id="sports" class="config-item-list">
+        <h1 class="is-size-3 has-text-centered">Sports</h1>
+        <hr>
+        <ul id="sport-list"></ul>
+      </div>
+      <div id="markets" class="config-item-list">
+        <h1 class="is-size-3 has-text-centered">
+          Markets<i class="config-navigator fas fa-level-up-alt is-hidden-desktop" data-target="sports"></i>
+        </h1>
+        <hr>
+        <ul id="market-list"></ul>
+      </div>
+      <div id="bets" class="config-item-list">
+        <h1 class="is-size-3 has-text-centered">
+          Bets<i class="config-navigator fas fa-level-up-alt is-hidden-desktop" data-target="markets"></i>
+        </h1>
+        <hr>
+        <ul id="bet-list"></ul>
+      </div>
     </div>
   </div>
 {% endblock %}
@@ -27,4 +98,9 @@
 {% block scripts %}
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
   <script src="{{ url_for('static', filename='js/configController.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/optionController.js') }}"></script>
+  <script>
+      SportComponent.getAllSports();
+      OptionItemComponent.getAllOptions();
+  </script>
 {% endblock %}
