@@ -50,7 +50,7 @@ class Notification:
         return json.dumps(n, ensure_ascii=False)
 
     def construct_telegram_message(self) -> str:
-        link = f'{self.event.get_sport_name_or_emoji()} <a href="{self.event.link}">{self.event.first_team.name} vs {self.event.second_team.name}</a>'
+        link = f'{self.event.get_sport_name_or_emoji()} <b>{self.event.first_team.name} vs {self.event.second_team.name}</b>'
         phase = f'Time: {self.event.get_time_or_phase()}'
         score = f'Score: {self.event.get_score()}'
         if self.event.has_score_info():
