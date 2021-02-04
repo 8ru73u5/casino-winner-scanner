@@ -61,4 +61,4 @@ class Notification:
         return '\n'.join([link, phase, score, bet, tips])
 
     def __hash__(self):
-        return hash((self.event.id, self.tip_group[0].market_group_id, self.tip_group[0].bet_group_id))
+        return hash((self.event.id, self.tip_group[0].unique_tip_group_id))

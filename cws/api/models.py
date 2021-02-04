@@ -119,6 +119,7 @@ class TeamInfo:
 @dataclass
 class Tip:
     id: int
+    unique_tip_group_id: int
     name: str
     odds: float
     market_group_id: int
@@ -143,6 +144,7 @@ class Tip:
 
         try:
             for market in data['ml']:
+                unique_tip_group_id = market['mi']
                 market_group_id = market['bggi']
                 market_group_name = market['bggn']
                 bet_group_id = market['bgi']
@@ -153,6 +155,7 @@ class Tip:
                 for tip in market['msl']:
                     tips.append(Tip(
                         id=tip['msi'],
+                        unique_tip_group_id=unique_tip_group_id,
                         name=tip['mst'],
                         odds=tip['msp'],
                         market_group_id=market_group_id,

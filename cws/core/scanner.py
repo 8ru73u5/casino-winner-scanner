@@ -152,17 +152,18 @@ class Scanner:
             event_new_notifications = []
 
             for market_id, bets in event_snapshot.snapshot.items():
-                for bet_id, tip_snapshots in bets.items():
+                for tip_group_id, tip_snapshots in bets.items():
+                    tips = [ts.tip for ts in tip_snapshots.values()]
+
                     try:
-                        ident = hash((event_snapshot.event.sport_id, market_id, bet_id))
-                        trigger_time = self.enabled_filters[ident]
+                        filter_ident = hash((event_snapshot.event.sport_id, market_id, tips[0].bet_group_id))
+                        trigger_time = self.enabled_filters[filter_ident]
                     except KeyError:
                         continue
 
-                    min_idle_time = min(snapshot.time_since_last_change for _, snapshot in tip_snapshots.items())
-                    notification_hash = hash((event_id, market_id, bet_id))
+                    min_idle_time = min(ts.time_since_last_change for ts in tip_snapshots.values())
+                    notification_hash = hash((event_id, tip_group_id))
 
-                    tips = [ts.tip for ts in tip_snapshots.values()]
                     is_market_active = tips[0].is_active
 
                     min_market_odds = min(t.odds for t in tips)

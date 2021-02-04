@@ -5,11 +5,11 @@ from typing import Dict
 
 from cws.api.models import Event, Tip
 
-MarketID_t = BetID_t = TipID_t = int
+MarketID_t = BetID_t = TipGroupID_t = int
 
 
 class EventSnapshot:
-    snapshot: Dict[MarketID_t, Dict[BetID_t, Dict[TipID_t, TipSnapshot]]]
+    snapshot: Dict[MarketID_t, Dict[BetID_t, Dict[TipGroupID_t, TipSnapshot]]]
     event: Event
     timestamp: datetime
 
@@ -28,8 +28,8 @@ class EventSnapshot:
                 continue
 
             market_group = self.snapshot.setdefault(tip.market_group_id, {})
-            bet_group = market_group.setdefault(tip.bet_group_id, {})
-            bet_group[tip.id] = TipSnapshot(tip)
+            tip_group = market_group.setdefault(tip.unique_tip_group_id, {})
+            tip_group[tip.id] = TipSnapshot(tip)
 
     def update(self, old_snapshot: EventSnapshot):
         time_between_updates = int((self.timestamp - old_snapshot.timestamp).total_seconds())
