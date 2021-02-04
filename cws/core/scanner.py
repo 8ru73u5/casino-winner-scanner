@@ -150,6 +150,7 @@ class Scanner:
         for event_id, event_snapshot in self.event_snapshots.items():
             event_is_frozen = True
             event_new_notifications = []
+            event_updated_notifications = []
 
             for market_id, bets in event_snapshot.snapshot.items():
                 for tip_group_id, tip_snapshots in bets.items():
@@ -172,7 +173,7 @@ class Scanner:
                     if is_market_active and min_idle_time >= trigger_time \
                             and min_market_odds >= self.min_odds and max_market_odds <= self.max_odds:
                         if notification_hash in self.notifications:
-                            updated_notifications.append((notification_hash, event_snapshot.event))
+                            event_updated_notifications.append((notification_hash, event_snapshot.event))
                         else:
                             event_new_notifications.append(Notification(event_snapshot.event, tips))
 
@@ -181,6 +182,7 @@ class Scanner:
 
             if not event_is_frozen:
                 new_notifications.extend(event_new_notifications)
+                updated_notifications.extend(event_updated_notifications)
 
         notifications = {}
 
