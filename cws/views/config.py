@@ -4,16 +4,19 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm.attributes import flag_modified
 
 from cws.models import Sport, Market, Bet, AppOption
+from cws.views.auth import login_required
 
 bp = Blueprint('config', __name__, url_prefix='/config')
 
 
 @bp.route('/')
+@login_required
 def main():
     return render_template('config.html')
 
 
 @bp.route('/sports')
+@login_required
 def get_sports():
     db_error = False
     sports = []
@@ -33,6 +36,7 @@ def get_sports():
 
 
 @bp.route('/markets')
+@login_required
 def get_markets():
     try:
         sport_id = int(request.args['sport_id'])
@@ -62,6 +66,7 @@ def get_markets():
 
 
 @bp.route('/bets')
+@login_required
 def get_bets():
     try:
         sport_id = int(request.args['sport_id'])
@@ -92,6 +97,7 @@ def get_bets():
 
 
 @bp.route('/sports', methods=('PATCH',))
+@login_required
 def set_sport_data():
     try:
         sport_id = int(request.json['id'])
@@ -130,6 +136,7 @@ def set_sport_data():
 
 
 @bp.route('/markets', methods=('PATCH',))
+@login_required
 def set_market_data():
     try:
         sport_id = int(request.json['sport_id'])
@@ -177,6 +184,7 @@ def set_market_data():
 
 
 @bp.route('/bets', methods=('PATCH',))
+@login_required
 def set_bet_data():
     try:
         sport_id = int(request.json['sport_id'])
@@ -217,6 +225,7 @@ def set_bet_data():
 
 
 @bp.route('/option/<int:option_id>')
+@login_required
 def get_option(option_id):
     db_error = False
 
@@ -238,6 +247,7 @@ def get_option(option_id):
 
 
 @bp.route('/option/<int:option_id>', methods=('PATCH',))
+@login_required
 def set_option(option_id):
     try:
         option_value = request.json['value']
