@@ -191,13 +191,14 @@ class Scanner:
 
         # New notifications
         for n in new_notifications:
-            notifications[hash(n)] = n
+            if n.event.is_tip_eligible_for_notification(n.tip_group[0]):
+                notifications[hash(n)] = n
 
         # Updated notifications
         for notification_hash, event in updated_notifications:
             n = self.notifications.get(notification_hash)
 
-            if n is not None:
+            if n is not None and n.event.is_tip_eligible_for_notification(n.tip_group[0]):
                 n.update(event)
                 notifications[hash(n)] = n
 

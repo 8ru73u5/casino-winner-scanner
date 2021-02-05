@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Set
 
 from .errors import InvalidApiResponseError
 
@@ -18,6 +18,8 @@ class Event:
     first_team: TeamInfo
     second_team: TeamInfo
     tips: List[Tip]
+    phase_related_bet_names: Set[str]
+    current_phase_bet_names: Optional[Set[str]]
 
     SPORT_EMOJI = {
         1: '⚽️',
@@ -34,6 +36,17 @@ class Event:
         92: '❄',
         119: '🎮',
         138: '🏓'
+    }
+
+    SPORT_PHASE_NAMES = {
+        1: ['half'],
+        2: ['period'],
+        3: ['half'],
+        4: ['quarter', 'half'],
+        9: ['set'],
+        11: ['set'],
+        119: ['map'],
+        138: ['set']
     }
 
     def has_time_info(self) -> bool:
@@ -64,6 +77,52 @@ class Event:
     def link(self):
         return f'https://www.casinowinner.com/en/live-betting#/event/{self.id}'
 
+    def _generate_phase_related_bet_name_list(self):
+        phase_names = Event.SPORT_PHASE_NAMES.get(self.sport_id)
+
+        if phase_names is None:
+            return
+
+        bet_names = {t.bet_group_name_real.lower() for t in self.tips}
+        current_phase_bets = set()
+
+        for phase_name in phase_names:
+            phase_related_bets = [bet_name for bet_name in bet_names if phase_name in bet_name]
+
+            pattern_pre = re.compile('(\d+)\S* ' + phase_name, re.IGNORECASE)
+            pattern_post = re.compile(phase_name + ' (\d+)', re.IGNORECASE)
+
+            bet_names_with_phases = []
+
+            for bet_name in phase_related_bets:
+                match = pattern_pre.search(bet_name) or pattern_post.search(bet_name)
+                if match is not None:
+                    bet_names_with_phases.append((bet_name, int(match.group(1))))
+
+            if len(bet_names_with_phases) == 0:
+                continue
+
+            current_phase = min(x[1] for x in bet_names_with_phases)
+            current_phase_bets.update(x[0] for x in bet_names_with_phases if x[1] == current_phase)
+
+            self.phase_related_bet_names.update(x[0] for x in bet_names_with_phases)
+
+        self.current_phase_bet_names = current_phase_bets
+
+    def is_tip_eligible_for_notification(self, tip: Tip) -> bool:
+        if self.sport_id not in Event.SPORT_PHASE_NAMES:
+            return True
+
+        if self.current_phase_bet_names is None:
+            self._generate_phase_related_bet_name_list()
+
+        bet_name = tip.bet_group_name_real.lower()
+
+        if bet_name not in self.phase_related_bet_names:
+            return True
+        else:
+            return bet_name in self.current_phase_bet_names
+
     @staticmethod
     def from_json(data: dict) -> Event:
         try:
@@ -90,7 +149,9 @@ class Event:
                 league_name=data['scn'],
                 first_team=TeamInfo(name=data['epl'][0]['pn'], score=team1_score),
                 second_team=TeamInfo(name=data['epl'][1]['pn'], score=team2_score),
-                tips=Tip.from_json(data)
+                tips=Tip.from_json(data),
+                phase_related_bet_names=set(),
+                current_phase_bet_names=None
             )
         except (KeyError, ValueError, IndexError, TypeError) as e:
             raise InvalidApiResponseError(data, e)
