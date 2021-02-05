@@ -180,6 +180,9 @@ class Scanner:
                     if min_idle_time < 120:
                         event_is_frozen = False
 
+            if len(event_snapshot.event.tips) <= 5:
+                event_is_frozen = False
+
             if not event_is_frozen:
                 new_notifications.extend(event_new_notifications)
                 updated_notifications.extend(event_updated_notifications)
