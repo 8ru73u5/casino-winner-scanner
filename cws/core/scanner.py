@@ -209,6 +209,7 @@ class Scanner:
 
         self.notifications = notifications
         self.redis_manager.set_notifications(notifications.values())
+        self.redis_manager.set_app_status(len(self.event_snapshots), len(self.notifications))
 
         self._send_telegram_notification()
 

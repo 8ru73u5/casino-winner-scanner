@@ -3,12 +3,13 @@ from flask_apscheduler import APScheduler
 from sqlalchemy.orm import scoped_session
 
 from cws.config import AppConfig
+from cws.core.status_monitor import StatusMonitor
 from cws.core.scanner import Scanner
 from cws.database import SessionLocal
 from cws.redis_manager import RedisManager
 from cws.views.app import bp as app_bp
-from cws.views.config import bp as config_bp
 from cws.views.auth import bp as auth_bp
+from cws.views.config import bp as config_bp
 
 
 def init_app(launch_core: bool = True):
@@ -26,9 +27,13 @@ def init_app(launch_core: bool = True):
         # noinspection PyTypeChecker
         scanner = Scanner(scoped_session(SessionLocal))
 
+        # Status monitor
+        status_monitor = StatusMonitor()
+
         # Scheduler
         scheduler = APScheduler(app=app)
         scheduler.add_job(func=scanner.cycle, trigger='interval', seconds=5, id='Scanner cycle')
+        scheduler.add_listener(status_monitor.scheduler_monitor, StatusMonitor.SUBSCRIBED_EVENTS)
         scheduler.start()
 
     # Blueprints

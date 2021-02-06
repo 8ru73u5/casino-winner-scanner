@@ -6,3 +6,4 @@ python-dotenv
 redis
 flask-apscheduler
 python-telegram-bot
+APScheduler
