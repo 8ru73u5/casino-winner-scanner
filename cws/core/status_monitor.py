@@ -11,6 +11,6 @@ class StatusMonitor:
 
     def scheduler_monitor(self, event: JobExecutionEvent):
         if event.code == EVENT_JOB_ERROR:
-            self.redis_manager.set_app_status_error(str(type(event.exception)), str(event.exception), event.traceback)
+            self.redis_manager.set_app_status_error(type(event.exception).__name__, str(event.exception), event.traceback)
         elif event.code == EVENT_JOB_MAX_INSTANCES:
             self.redis_manager.get_app_status_heavy_load()
