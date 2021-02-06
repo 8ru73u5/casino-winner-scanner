@@ -1,3 +1,5 @@
+from datetime import datetime
+from json import dumps
 from typing import List, Iterable, Optional, Dict, Union
 
 from redis import Redis
@@ -14,6 +16,7 @@ class RedisManager:
     APP_STATUS_ERROR_CLASS_KEY = 'cw_app_status_error_class'
     APP_STATUS_ERROR_DESC_KEY = 'cw_app_status_error_desc'
     APP_STATUS_ERROR_TRACEBACK_KEY = 'cw_app_status_error_traceback'
+    APP_LAST_ERRORS_KEY = 'cw_last_errors'
 
     def __init__(self):
         self.conn = Redis(host=AppConfig.get(AppConfig.Variables.REDIS_HOST), port=AppConfig.get(AppConfig.Variables.REDIS_PORT))
@@ -54,6 +57,19 @@ class RedisManager:
         self.conn.setex(RedisManager.APP_STATUS_ERROR_CLASS_KEY, 15, error_class)
         self.conn.setex(RedisManager.APP_STATUS_ERROR_DESC_KEY, 15, error_desc)
         self.conn.setex(RedisManager.APP_STATUS_ERROR_TRACEBACK_KEY, 15, traceback)
+
+        e = {
+            'error_class': error_class,
+            'error_desc': error_desc,
+            'traceback': traceback,
+            'occurred_on': str(datetime.now())
+        }
+
+        self.conn.lpush(RedisManager.APP_LAST_ERRORS_KEY, dumps(e, ensure_ascii=False))
+        self.conn.ltrim(RedisManager.APP_LAST_ERRORS_KEY, 0, 25)
+
+    def get_last_errors(self) -> List[str]:
+        return [e.decode('utf-8') for e in self.conn.lrange(RedisManager.APP_LAST_ERRORS_KEY, 0, -1)]
 
     def get_app_status_error(self) -> Optional[Dict[str, str]]:
         error_class = self.conn.get(RedisManager.APP_STATUS_ERROR_CLASS_KEY)

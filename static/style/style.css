@@ -2,7 +2,8 @@
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  margin: 3rem 0;
+  margin-top: 3rem;
+  margin-bottom: 5rem;
   width: 100%; }
   #filters .config-item-list {
     padding: 1rem 0;
@@ -56,7 +57,7 @@
 
 #notifications-container {
   padding: 0 1rem;
-  margin-bottom: 3rem; }
+  margin-bottom: 5rem; }
   @media (max-width: 960px) {
     #notifications-container {
       font-size: 12px; } }
@@ -148,5 +149,35 @@
         margin: 0; }
         #notifications-container .notification .content ul li {
           margin: 0; }
+
+#status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 99999;
+  color: #e87632; }
+  @media (max-width: 1024px) {
+    #status-bar {
+      justify-content: center; } }
+  #status-bar .status-bar-item {
+    padding: 0 1rem;
+    border-right: 1px solid #e87632; }
+    #status-bar .status-bar-item:last-of-type {
+      border-right: none;
+      padding-right: 0; }
+    #status-bar .status-bar-item:first-of-type {
+      padding-left: 0; }
+    #status-bar .status-bar-item strong {
+      color: #e87632; }
+    #status-bar .status-bar-item span {
+      text-transform: uppercase; }
+    #status-bar .status-bar-item a {
+      text-decoration: underline;
+      color: #e87632; }
 
 /*# sourceMappingURL=style.css.map */

@@ -38,6 +38,28 @@
     </div>
   </div>
 </nav>
+
+{% if g.admin %}
+  <div id="status-bar" class="has-background-dark p-2">
+    <div class="status-bar-item">
+      <strong class="is-hidden-touch">Events:</strong><i class="fas fa-dice is-hidden-desktop"></i>
+      <span id="status-events">&horbar;</span>
+    </div>
+    <div class="status-bar-item">
+      <strong class="is-hidden-touch">Notifications:</strong><i class="fas fa-envelope is-hidden-desktop"></i>
+      <span id="status-notifications">&horbar;</span>
+    </div>
+    <div class="status-bar-item">
+      <strong class="is-hidden-touch">Heavy load:</strong><i class="fas fa-weight-hanging is-hidden-desktop"></i>
+      <span id="status-heavy-load">&horbar;</span>
+    </div>
+    <div class="status-bar-item">
+      <strong class="is-hidden-touch"><a href="{{ url_for('app.get_last_errors') }}" target="_blank">Errors</a>:</strong><i class="fas fa-exclamation-circle is-hidden-desktop"></i>
+      <span id="status-error">&horbar;</span>
+    </div>
+  </div>
+{% endif %}
+
 {% block content %}{% endblock %}
 </body>
 <script>
@@ -50,5 +72,8 @@
         navMenu.classList.toggle('is-active');
     });
 </script>
+{% if g.admin %}
+  <script src="{{ url_for('static', filename='js/statusManager.js') }}"></script>
+{% endif %}
 {% block scripts %}{% endblock %}
 </html>
