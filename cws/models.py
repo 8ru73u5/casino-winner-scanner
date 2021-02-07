@@ -123,6 +123,12 @@ class AppOption(Base):
             'check': lambda v: int(v) >= 5,
             'name': 'Sound notification after × seconds'
         }
+        TELEGRAM_SECOND_NOTIFICATION_MIN_UPTIME = {
+            'id': 5,
+            'default': 600,
+            'check': lambda v: int(v) >= 10,
+            'name': 'Telegram second notification after × seconds'
+        }
 
         @staticmethod
         def get_by_id(option_id: int) -> Optional[dict]:
