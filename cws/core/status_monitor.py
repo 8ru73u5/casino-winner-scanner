@@ -13,4 +13,4 @@ class StatusMonitor:
         if event.code == EVENT_JOB_ERROR:
             self.redis_manager.set_app_status_error(type(event.exception).__name__, str(event.exception), event.traceback)
         elif event.code == EVENT_JOB_MAX_INSTANCES:
-            self.redis_manager.get_app_status_heavy_load()
+            self.redis_manager.set_app_status_heavy_load()
