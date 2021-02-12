@@ -78,23 +78,35 @@ class Scanner:
                 bets.add((tip.bet_group_id, tip.bet_group_name, True, event.sport_id, tip.market_group_id))
 
         db_error = None
+        db_change = False
 
         try:
-            self.session.execute(
-                psql_insert(Sport).values(list(sports)).on_conflict_do_nothing()
-            )
-            self.session.execute(
-                psql_insert(Market).values(list(markets)).on_conflict_do_nothing()
-            )
-            self.session.execute(
-                psql_insert(Bet).values(list(bets)).on_conflict_do_nothing()
-            )
-            self.session.commit()
+            if len(sports) > 0:
+                db_change = True
+                self.session.execute(
+                    psql_insert(Sport).values(list(sports)).on_conflict_do_nothing()
+                )
+
+            if len(markets) > 0:
+                db_change = True
+                self.session.execute(
+                    psql_insert(Market).values(list(markets)).on_conflict_do_nothing()
+                )
+
+            if len(bets) > 0:
+                db_change = True
+                self.session.execute(
+                    psql_insert(Bet).values(list(bets)).on_conflict_do_nothing()
+                )
+
+            if db_change:
+                self.session.commit()
         except SQLAlchemyError as e:
             self.session.rollback()
             db_error = e
         finally:
-            self.session.close()
+            if db_change:
+                self.session.close()
 
         if db_error is not None:
             raise db_error
@@ -152,10 +164,6 @@ class Scanner:
         updated_notifications = []
 
         for event_id, event_snapshot in self.event_snapshots.items():
-            event_is_frozen = True
-            event_new_notifications = []
-            event_updated_notifications = []
-
             for market_id, bets in event_snapshot.snapshot.items():
                 for tip_group_id, tip_snapshots in bets.items():
                     tips = [ts.tip for ts in tip_snapshots.values()]
@@ -177,19 +185,9 @@ class Scanner:
                     if is_market_active and min_idle_time >= trigger_time \
                             and min_market_odds >= self.min_odds and max_market_odds <= self.max_odds:
                         if notification_hash in self.notifications:
-                            event_updated_notifications.append((notification_hash, event_snapshot.event))
+                            updated_notifications.append((notification_hash, event_snapshot.event))
                         else:
-                            event_new_notifications.append(Notification(event_snapshot.event, tips))
-
-                    if min_idle_time < 120:
-                        event_is_frozen = False
-
-            if len(event_snapshot.event.tips) <= 5:
-                event_is_frozen = False
-
-            if not event_is_frozen:
-                new_notifications.extend(event_new_notifications)
-                updated_notifications.extend(event_updated_notifications)
+                            new_notifications.append(Notification(event_snapshot.event, tips))
 
         notifications = {}
 
