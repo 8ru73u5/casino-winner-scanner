@@ -11,6 +11,7 @@ from .errors import InvalidApiResponseError
 class Event:
     id: int
     time: Optional[Tuple[int, int]]  # (minutes, seconds)
+    is_break: Optional[int]
     game_phase: str
     sport_id: int
     sport_name: str
@@ -45,6 +46,7 @@ class Event:
         4: ['quarter', 'half'],
         9: ['set'],
         11: ['set', 'game'],
+        17: ['frame'],
         119: ['map'],
         138: ['set' 'game']
     }
@@ -140,11 +142,17 @@ class Event:
                 time = None
                 game_phase = None
 
+            sport_id = data['ci']
+            is_break = None
+            if sport_id == 1:  # Football
+                is_break = data['sb']['gcp']['gpn'] == 'Halftime'
+
             event = Event(
                 id=data['ei'],
                 time=time,
+                is_break=is_break,
                 game_phase=game_phase,
-                sport_id=data['ci'],
+                sport_id=sport_id,
                 sport_name=data['cn'],
                 league_name=data['scn'],
                 first_team=TeamInfo(name=data['epl'][0]['pn'], score=team1_score),

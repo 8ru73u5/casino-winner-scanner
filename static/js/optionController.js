@@ -5,7 +5,8 @@ class OptionItemComponent {
         2: 'option-max-odds',
         3: 'option-telegram-notification',
         4: 'option-sound-notification',
-        5: 'option-telegram-second-notification'
+        5: 'option-telegram-second-notification',
+        6: 'option-auto-break-min-idle-time'
     };
 
     constructor(optionId, optionHookId) {

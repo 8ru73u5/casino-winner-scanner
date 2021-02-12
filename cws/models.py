@@ -129,6 +129,12 @@ class AppOption(Base):
             'check': lambda v: int(v) >= 10,
             'name': 'Telegram second notification after × seconds'
         }
+        AUTO_BREAK_MIN_IDLE_TIME = {
+            'id': 6,
+            'default': 180,
+            'check': lambda v: int(v) >= 10,
+            'name': 'Auto-break after × seconds'
+        }
 
         @staticmethod
         def get_by_id(option_id: int) -> Optional[dict]:

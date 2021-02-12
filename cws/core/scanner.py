@@ -26,6 +26,7 @@ class Scanner:
     notifications: Dict[int, Notification]
     min_odds: float
     max_odds: float
+    auto_break_min_idle_time: int
     telegram_notification_min_uptime: int
     telegram_second_notification_min_uptime: int
     telegram_notifier: TelegramNotifier
@@ -146,6 +147,7 @@ class Scanner:
         try:
             self.min_odds = AppOption.get_option(AppOption.OptionType.MIN_ODDS, self.session)
             self.max_odds = AppOption.get_option(AppOption.OptionType.MAX_ODDS, self.session)
+            self.auto_break_min_idle_time = AppOption.get_option(AppOption.OptionType.AUTO_BREAK_MIN_IDLE_TIME, self.session)
             self.telegram_notification_min_uptime = AppOption.get_option(AppOption.OptionType.TELEGRAM_NOTIFICATION_MIN_UPTIME, self.session)
             self.telegram_second_notification_min_uptime = AppOption.get_option(
                 AppOption.OptionType.TELEGRAM_SECOND_NOTIFICATION_MIN_UPTIME, self.session
@@ -164,6 +166,13 @@ class Scanner:
         updated_notifications = []
 
         for event_id, event_snapshot in self.event_snapshots.items():
+            if event_snapshot.event.is_break:
+                continue
+
+            event_updated_notifications = []
+            event_new_notifications = []
+            event_auto_break_detected = True
+
             for market_id, bets in event_snapshot.snapshot.items():
                 for tip_group_id, tip_snapshots in bets.items():
                     tips = [ts.tip for ts in tip_snapshots.values()]
@@ -185,9 +194,19 @@ class Scanner:
                     if is_market_active and min_idle_time >= trigger_time \
                             and min_market_odds >= self.min_odds and max_market_odds <= self.max_odds:
                         if notification_hash in self.notifications:
-                            updated_notifications.append((notification_hash, event_snapshot.event))
+                            event_updated_notifications.append((notification_hash, event_snapshot.event))
                         else:
-                            new_notifications.append(Notification(event_snapshot.event, tips))
+                            event_new_notifications.append(Notification(event_snapshot.event, tips))
+
+                    if min_idle_time < self.auto_break_min_idle_time:
+                        event_auto_break_detected = False
+
+            if len(event_snapshot.event.tips) <= 5:
+                event_auto_break_detected = False
+
+            if not event_auto_break_detected:
+                new_notifications.extend(event_new_notifications)
+                updated_notifications.extend(event_updated_notifications)
 
         notifications = {}
 
