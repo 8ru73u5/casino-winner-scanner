@@ -44,9 +44,9 @@ class Event:
         3: ['half'],
         4: ['quarter', 'half'],
         9: ['set'],
-        11: ['set'],
+        11: ['set', 'game'],
         119: ['map'],
-        138: ['set']
+        138: ['set' 'game']
     }
 
     def has_time_info(self) -> bool:
