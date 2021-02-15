@@ -142,17 +142,12 @@ class Event:
                 time = None
                 game_phase = None
 
-            sport_id = data['ci']
-            is_break = None
-            if sport_id == 1:  # Football
-                is_break = data['sb']['gcp']['gpn'] == 'Halftime'
-
             event = Event(
                 id=data['ei'],
                 time=time,
-                is_break=is_break,
+                is_break=game_phase == 'Halftime',
                 game_phase=game_phase,
-                sport_id=sport_id,
+                sport_id=data['ci'],
                 sport_name=data['cn'],
                 league_name=data['scn'],
                 first_team=TeamInfo(name=data['epl'][0]['pn'], score=team1_score),
