@@ -6,7 +6,7 @@ from typing import Optional
 
 
 class BetHistoryItemState(Enum):
-    PENDING = 'pending'
+    OPEN = 'open'
     WON = 'won'
     LOST = 'lost'
 
@@ -40,7 +40,7 @@ class BetHistoryItem:
         elif 'lost' in data['betsStatus']:
             state = BetHistoryItemState.LOST
         else:
-            state = BetHistoryItemState.PENDING
+            state = BetHistoryItemState.OPEN
 
         bet_data = data['systemBet']['selections'][0]
 
