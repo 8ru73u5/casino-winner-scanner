@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h1 class="title is-3">Bot overview</h1>
+  <ul>
+    {% for bot in bots %}
+      <li data-id="{{ bot.id }}">
+        <span class="username">{{ bot.username }}</span>
+        <span class="icon">
+          <img src="{{ url_for('static', filename='img/' + bot.bookmaker.name + '_icon.ico') }}"
+               alt="{{ bot.bookmaker.name }}">
+        </span>
+        <span class="country-code">{{ bot.proxy_country_code }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
