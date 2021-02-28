@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from json import dumps
 from typing import List
 
 from requests import Session, HTTPError
 
 from cws.bots.bet_history_item import BetHistoryItem
+from cws.bots.proxy_manager import ProxyManager
 
 
 class BookmakerType(Enum):
@@ -38,6 +40,12 @@ class BookmakerType(Enum):
     @property
     def base_headers(self):
         return self.value['base_headers']
+
+
+class CouponFilterType(Enum):
+    ALL = 'All'
+    OPEN = 'Open'
+    SETTLED = 'Settled'
 
 
 @dataclass
@@ -79,22 +87,27 @@ def bet_login_required(method):
 
 
 class BetBot:
-    def __init__(self, username: str, password: str, bookmaker: BookmakerType, log_in: bool = False):
+    def __init__(self, username: str, password: str, bookmaker: BookmakerType, country_code: str, log_in: bool = False):
         self._username = username
         self._password = password
         self.bookmaker = bookmaker
+        self._proxy_country_code = country_code
 
         self._session = None
         self._session_token = None
         self._sportsbook_token = None
         self._customer_id = None
 
+        self._wallet_balance = None
+
         if log_in:
             self.login()
-            self.get_sportsbook_token()
+            self.get_wallet_balance(reload=True)
+            self._get_sportsbook_token()
 
     def __del__(self):
-        self.logout()
+        if self.has_session():
+            self.logout()
 
     def has_session(self) -> bool:
         return self._session is not None
@@ -112,10 +125,17 @@ class BetBot:
         if not self.has_session():
             self._session = Session()
             self._session.headers.update(self.bookmaker.base_headers)
+            self._refresh_proxy()
 
         return self._session
 
+    def _refresh_proxy(self):
+        if self.has_session():
+            self._session.proxies = ProxyManager.get_random_proxy(self._proxy_country_code)
+
     def login(self):
+        self._reset_session()
+
         data = {
             'username': self._username,
             'password': self._password
@@ -143,7 +163,7 @@ class BetBot:
         self._reset_session()
 
     @bet_login_required
-    def get_sportsbook_token(self):
+    def _get_sportsbook_token(self):
         print('Getting sportsbook token...', end=' ')
         r = self._get_session().get(f'{self.bookmaker.url}/api/sb/v2/sportsbookgames/{self.bookmaker.name}/{self._customer_id}')
         r.raise_for_status()
@@ -152,21 +172,24 @@ class BetBot:
         self._sportsbook_token = r.json()['token']
 
     @bet_login_required
-    def get_wallet_balance(self) -> WalletBalance:
-        print('Getting wallet balance...', end=' ')
-        r = self._get_session().get(self.bookmaker.url + '/api/v2/wallet/balance')
-        r.raise_for_status()
-        print('done!')
+    def get_wallet_balance(self, reload: bool = False) -> WalletBalance:
+        if reload:
+            print('Getting wallet balance...', end=' ')
+            r = self._get_session().get(self.bookmaker.url + '/api/v2/wallet/balance')
+            r.raise_for_status()
+            print('done!')
 
-        return WalletBalance.from_json(r.json()['balance'])
+            self._wallet_balance = WalletBalance.from_json(r.json()['balance'])
+
+        return self._wallet_balance
 
     @bet_login_required
-    def get_bet_history(self) -> List[BetHistoryItem]:
+    def get_bet_history(self, coupon_filter: CouponFilterType = CouponFilterType.ALL) -> List[BetHistoryItem]:
         if self._sportsbook_token is None:
-            self.get_sportsbook_token()
+            self._get_sportsbook_token()
 
         params = {
-            'couponFilter': 'Settled',
+            'couponFilter': coupon_filter.value,
             'page': 1,
             'pageSize': 19
         }
@@ -179,3 +202,34 @@ class BetBot:
         print('done!')
 
         return [BetHistoryItem.from_json(bet) for bet in r.json()['data']['coupons']]
+
+    @bet_login_required
+    def place_bet(self, stake: float, odds: float, market_selection_id: str):
+        if self._sportsbook_token is None:
+            self._get_sportsbook_token()
+
+        data = {
+            'acceptOddsChanges': False,
+            'bets': [
+                {
+                    'stake': stake,
+                    'stakeForReview': 0,
+                    'betSelections': [
+                        {
+                            'marketSelectionId': market_selection_id,
+                            'odds': odds
+                        }
+                    ]
+                }
+            ]
+        }
+
+        headers = {'sportsbookToken': self._sportsbook_token}
+
+        print('Placing bet...', end=' ')
+        r = self._get_session().post(self.bookmaker.url + '/api/sb/v1/coupons', headers=headers, json=data)
+        r.raise_for_status()
+        print('done! Response:')
+
+        # TODO: Parse the response and extract success/failure information
+        print(dumps(r.json(), ensure_ascii=False, indent=2))
