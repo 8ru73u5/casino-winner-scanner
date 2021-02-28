@@ -3,11 +3,12 @@ from __future__ import annotations
 from enum import Enum
 from typing import Optional, Any
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, ForeignKeyConstraint
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, ForeignKeyConstraint, Enum as sql_Enum, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import relationship, Session
 
+from .bots.bet_bot import BookmakerType
 from .database import Base
 
 
@@ -95,6 +96,21 @@ class Bet(Base):
 
     def __hash__(self):
         return hash((self.id, self.market_id, self.sport_id))
+
+
+class BettingBot(Base):
+    __tablename__ = 'betting_bots'
+
+    __table_args__ = (
+        UniqueConstraint('username', 'bookmaker'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(50), nullable=False)
+    password = Column(String(50), nullable=False)
+    bookmaker = Column(sql_Enum(BookmakerType), nullable=False)
+    is_enabled = Column(Boolean, nullable=False, default=True)
+    proxy_country_code = Column(String(5), nullable=False, default='US')
 
 
 class AppOption(Base):
