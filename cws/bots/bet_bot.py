@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from json import dumps
+from json.decoder import JSONDecodeError
 from typing import List
 
 from requests import Session, HTTPError
@@ -86,6 +87,10 @@ def bet_login_required(method):
     return wrapper
 
 
+class BotInvalidCredentialsError(Exception):
+    pass
+
+
 class BetBot:
     def __init__(self, username: str, password: str, bookmaker: BookmakerType, country_code: str, log_in: bool = False):
         self._username = username
@@ -143,7 +148,19 @@ class BetBot:
 
         print('Logging in...', end=' ')
         r = self._get_session().post(self.bookmaker.url + '/api/v1/single-sign-on-sessions', json=data)
-        r.raise_for_status()
+
+        try:
+            r.raise_for_status()
+        except HTTPError as e:
+            if e.response.status_code == 400:
+                try:
+                    if e.response.json()['code'] == 'E_SESSIONS_LOGIN_INVALIDCREDENTIALS':
+                        raise BotInvalidCredentialsError()
+                except (JSONDecodeError, KeyError):
+                    pass
+
+            raise
+
         print('done!')
 
         data = r.json()
