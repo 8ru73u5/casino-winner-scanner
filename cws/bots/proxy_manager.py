@@ -48,4 +48,9 @@ class ProxyManager:
 
     @classmethod
     def get_random_proxy(cls, countries: Union[str, List[str]] = None) -> Dict[str, str]:
-        return choice(cls.get_proxy_list(countries))
+        proxies = cls.get_proxy_list(countries)
+
+        if len(proxies) == 0:
+            return {}
+        else:
+            return choice(proxies)
