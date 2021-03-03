@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, current_app
+from flask import Blueprint, render_template, request, current_app, redirect, url_for, flash
+from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
-from cws.bots.bet_bot import BookmakerType
+from cws.bots.bet_bot import BookmakerType, BetBot, BotInvalidCredentialsError
 from cws.models import BettingBot
 from cws.views.auth import login_required
 
@@ -28,20 +29,17 @@ def overview():
     return render_template('bots/overview.html', bots=bots)
 
 
-@bp.route('/add')
-@login_required
-def add_bot_page():
-    return render_template('bots/add_bot.html')
-
-
-@bp.route('/bot', methods=('PUT',))
+@bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_bot():
+    if request.method == 'GET':
+        return render_template('bots/add_bot.html')
+
     try:
-        username = request.json['username']
-        password = request.json['password']
-        bookmaker = request.json['bookmaker']
-        country_code = request.json['country_code']
+        username = request.form['username']
+        password = request.form['password']
+        bookmaker = request.form['bookmaker']
+        country_code = request.form['country_code']
     except KeyError:
         return '', 400
 
@@ -53,11 +51,29 @@ def add_bot():
         return '', 400
 
     db_error = False
+    bot_already_exists_error = False
+    bot_invalid_credentials_error = False
 
     try:
-        bot = BettingBot(username=username, password=password, bookmaker=bookmaker, proxy_country_code=country_code)
-        current_app.session.add(bot)
-        current_app.session.commit()
+        existing_bot = current_app.session.query(BettingBot).filter(and_(
+            BettingBot.username == username,
+            BettingBot.bookmaker == bookmaker
+        )).first()
+
+        if existing_bot is not None:
+            bot_already_exists_error = True
+        else:
+            try:
+                bot_login = BetBot(username, password, bookmaker, country_code)
+                bot_login.login()
+            except BotInvalidCredentialsError:
+                bot_invalid_credentials_error = True
+            else:
+                bot_login.logout()
+
+                bot = BettingBot(username=username, password=password, bookmaker=bookmaker, proxy_country_code=country_code)
+                current_app.session.add(bot)
+                current_app.session.commit()
     except SQLAlchemyError:
         db_error = True
         current_app.session.rollback()
@@ -66,8 +82,14 @@ def add_bot():
 
     if db_error:
         return '', 500
+    elif bot_already_exists_error:
+        flash(f'Email: {username} already exists for {bookmaker.name} bookmaker')
+        return redirect(url_for('bots.add_bot'))
+    elif bot_invalid_credentials_error:
+        flash('Provided credentials are invalid')
+        return redirect(url_for('bots.add_bot'))
     else:
-        return ''
+        return redirect(url_for('bots.overview'))
 
 
 @bp.route('/bot/<int:bot_id>')

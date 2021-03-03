@@ -1,5 +1,80 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  Add bot page
+  <div class="container is-fluid">
+    <form method="post">
+      <h1 class="title is-2 has-text-centered">Add new bot</h1>
+      <div class="field is-horizontal">
+        <div class="field-label is-normal">
+          <label class="label">Credentials</label>
+        </div>
+        <div class="field-body">
+          <div class="field">
+            <div class="control">
+              <input class="input" type="email" name="username"
+                     placeholder="Email" aria-label="Username" required>
+              {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                  <p class="help is-danger">{{ messages[0] }}</p>
+                {% endif %}
+              {% endwith %}
+            </div>
+          </div>
+          <div class="field">
+            <div class="control">
+              <input class="input" type="password" name="password"
+                     placeholder="Password" aria-label="Password" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field is-horizontal">
+        <div class="field-label is-normal">
+          <label class="label">Bookmaker</label>
+        </div>
+        <div class="field-body">
+          <div class="field">
+            <div class="select">
+              <select name="bookmaker" aria-label="Bookmaker">
+                <option value="BETSSON">Betsson</option>
+                <option value="BETSAFE">Betsafe</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field is-horizontal">
+        <div class="field-label is-normal">
+          <label class="label">Proxy country</label>
+        </div>
+        <div class="field-body">
+          <div class="field">
+            <div class="select">
+              <select name="country_code" aria-label="Proxy country">
+                <option value="US">United States</option>
+                <option value="DE">Germany</option>
+                <option value="BR">Brazil</option>
+                <option value="ES">Spain</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field is-horizontal">
+        <div class="field-label"></div>
+        <div class="field-body">
+          <div class="field">
+            <div class="control">
+              <button type="submit" class="button is-primary">
+                Add bot
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
 {% endblock %}
