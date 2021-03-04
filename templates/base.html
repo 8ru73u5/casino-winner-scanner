@@ -24,6 +24,12 @@
   <div id="mainNav" class="navbar-menu">
     <div class="navbar-end">
       {% if g.admin %}
+        <a href="{{ url_for('bots.add_bot') }}" class="navbar-item">
+          Add bot
+        </a>
+        <a href="{{ url_for('bots.overview') }}" class="navbar-item">
+          Bot overview
+        </a>
         <a href="{{ url_for('config.main') }}" class="navbar-item">
           Configure
         </a>
