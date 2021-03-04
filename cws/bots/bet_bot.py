@@ -135,13 +135,17 @@ class BetBot:
         if not self.has_session():
             self._session = Session()
             self._session.headers.update(self.bookmaker.base_headers)
-            self._refresh_proxy()
+            self._session.proxies = ProxyManager.get_random_proxy(self._proxy_country_code)
 
         return self._session
 
-    def _refresh_proxy(self):
-        if self.has_session():
-            self._session.proxies = ProxyManager.get_random_proxy(self._proxy_country_code)
+    def change_proxy_country_code(self, new_country_code: str, relogin_with_new_proxy: bool = True):
+        if self._proxy_country_code != new_country_code:
+            self._proxy_country_code = new_country_code
+
+            if relogin_with_new_proxy:
+                self.logout()
+                self.login(get_sportsbook_token=True)
 
     def login(self, get_sportsbook_token: bool = False):
         self._reset_session()

@@ -52,6 +52,7 @@ class BotManager:
                 self._bots[b.id] = BetBot(b.username, b.password, b.bookmaker, b.proxy_country_code, b.is_enabled)
             else:
                 self._bots[b.id].is_enabled = b.is_enabled
+                self._bots[b.id].change_proxy_country_code(b.proxy_country_code)
 
         # Remove bots that have been deleted from the database
         for bot_id in set(self._bots.keys()).difference(db_bot_ids):
