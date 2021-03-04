@@ -65,6 +65,10 @@ class WalletBalance:
             currency=data['currencyCode'],
         )
 
+    @property
+    def funds(self) -> str:
+        return f'{self.total_amount} {self.currency}'
+
 
 def bet_login_required(method):
     def wrapper(bet_bot: BetBot, *args, **kwargs):
@@ -92,11 +96,12 @@ class BotInvalidCredentialsError(Exception):
 
 
 class BetBot:
-    def __init__(self, username: str, password: str, bookmaker: BookmakerType, country_code: str, log_in: bool = False):
+    def __init__(self, username: str, password: str, bookmaker: BookmakerType, country_code: str, is_enabled: bool, log_in: bool = False):
         self._username = username
         self._password = password
         self.bookmaker = bookmaker
         self._proxy_country_code = country_code
+        self.is_enabled = is_enabled
 
         self._session = None
         self._session_token = None
@@ -138,7 +143,7 @@ class BetBot:
         if self.has_session():
             self._session.proxies = ProxyManager.get_random_proxy(self._proxy_country_code)
 
-    def login(self):
+    def login(self, get_sportsbook_token: bool = False):
         self._reset_session()
 
         data = {
@@ -168,6 +173,9 @@ class BetBot:
         self._customer_id = data['customerId']
         self._get_session().headers.update({'sessionToken': self._session_token})
 
+        if get_sportsbook_token:
+            self._get_sportsbook_token()
+
     def logout(self):
         if not self.has_session():
             return
@@ -182,7 +190,7 @@ class BetBot:
     @bet_login_required
     def _get_sportsbook_token(self):
         print('Getting sportsbook token...', end=' ')
-        r = self._get_session().get(f'{self.bookmaker.url}/api/sb/v2/sportsbookgames/{self.bookmaker.name}/{self._customer_id}')
+        r = self._get_session().get(f'{self.bookmaker.url}/api/sb/v2/sportsbookgames/betsson/{self._customer_id}')
         r.raise_for_status()
         print('done!')
 
