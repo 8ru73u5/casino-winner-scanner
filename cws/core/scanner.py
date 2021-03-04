@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from itertools import cycle
 from typing import Dict, List
 
 from sqlalchemy import and_
@@ -11,9 +12,11 @@ from sqlalchemy.sql.functions import coalesce
 
 from cws.api.casino_winner import CasinoWinnerApi as Api
 from cws.api.models import Event
+from cws.bots.bot_manager import BotManager
 from cws.core.notification import Notification
 from cws.core.notifier import TelegramNotifier
 from cws.core.snapshots import EventSnapshot
+from cws.database import SessionLocal
 from cws.models import Sport, Market, Bet, AppOption
 from cws.redis_manager import RedisManager
 
@@ -35,6 +38,8 @@ class Scanner:
         self.session = session
         self.redis_manager = RedisManager()
         self.telegram_notifier = TelegramNotifier()
+        self.bot_manager = BotManager(SessionLocal())
+        self._bot_manager_update_cycle = cycle(range(10))
 
         self._load_enabled_filters()
         self._load_odds_options()
@@ -49,6 +54,10 @@ class Scanner:
         self._update_database(events)
         self._load_enabled_filters()
         self._load_odds_options()
+
+        if next(self._bot_manager_update_cycle) == 0:
+            self.bot_manager.load_bots(log_in_bots=True)
+            self.bot_manager.save_bots_info_to_redis()
 
         new_event_snapshots = self._make_snapshots(events, timestamp)
         self._update_snapshots(new_event_snapshots)

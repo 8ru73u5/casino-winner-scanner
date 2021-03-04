@@ -10,6 +10,7 @@ from cws.redis_manager import RedisManager
 from cws.views.app import bp as app_bp
 from cws.views.auth import bp as auth_bp
 from cws.views.config import bp as config_bp
+from cws.views.bots import bp as bot_bp
 
 
 def init_app(launch_core: bool = True):
@@ -40,6 +41,7 @@ def init_app(launch_core: bool = True):
     app.register_blueprint(app_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(config_bp)
+    app.register_blueprint(bot_bp)
 
     return app
 
