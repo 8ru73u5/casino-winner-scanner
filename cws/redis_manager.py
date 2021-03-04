@@ -4,6 +4,8 @@ from typing import List, Iterable, Optional, Dict, Union
 
 from redis import Redis
 
+from cws.bots.bet_bot import WalletBalance
+from cws.bots.bet_history_item import BetHistoryItem
 from cws.config import AppConfig
 from cws.core.notification import Notification
 
@@ -17,6 +19,8 @@ class RedisManager:
     APP_STATUS_ERROR_DESC_KEY = 'cw_app_status_error_desc'
     APP_STATUS_ERROR_TRACEBACK_KEY = 'cw_app_status_error_traceback'
     APP_LAST_ERRORS_KEY = 'cw_last_errors'
+    BET_BOT_WALLETS_KEY = 'cw_bet_bots_wallet_balance'
+    BET_BOT_HISTORY_KEY = 'cw_bet_bots_bet_history'
 
     def __init__(self):
         self.conn = Redis(host=AppConfig.get(AppConfig.Variables.REDIS_HOST), port=AppConfig.get(AppConfig.Variables.REDIS_PORT))
@@ -90,3 +94,25 @@ class RedisManager:
 
     def get_app_status_heavy_load(self) -> bool:
         return self.conn.get(RedisManager.APP_STATUS_HEAVY_LOAD_KEY) is not None
+
+    def set_bet_bots_wallet_balance(self, wallet_balances: Dict[int, Optional[WalletBalance]]):
+        for bot_id, wallet in wallet_balances.items():
+            self.conn.set(f'{RedisManager.BET_BOT_WALLETS_KEY}:{bot_id}', wallet.funds)
+
+    def get_bet_bot_wallet_balance(self, bot_id: int) -> Optional[str]:
+        wb = self.conn.get(f'{RedisManager.BET_BOT_WALLETS_KEY}:{bot_id}')
+        if wb is not None:
+            return wb.decode('utf-8')
+        else:
+            return None
+
+    def set_bet_bots_bet_history(self, bet_histories: Dict[int, Optional[List[BetHistoryItem]]]):
+        for bot_id, history in bet_histories.items():
+            self.conn.set(f'{RedisManager.BET_BOT_HISTORY_KEY}:{bot_id}', BetHistoryItem.to_json_str_multiple(history))
+
+    def get_bet_bot_bet_history(self, bot_id: int) -> Optional[str]:
+        bh = self.conn.get(f'{RedisManager.BET_BOT_HISTORY_KEY}:{bot_id}')
+        if bh is not None:
+            return bh.decode('utf-8')
+        else:
+            return None

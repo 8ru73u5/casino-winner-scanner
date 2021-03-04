@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from json import dumps
+from typing import Optional, List
 
 
 class BetHistoryItemState(Enum):
@@ -56,3 +57,20 @@ class BetHistoryItem:
             stake=data['stake'],
             payout=data['totalPayout'] if state is BetHistoryItemState.WON else None
         )
+
+    def to_json_str(self) -> str:
+        return dumps({
+            'event_name': self.event_name,
+            'category_name': self.category_name,
+            'market_name': self.market_name,
+            'selection_name': self.selection_name,
+            'submission_date': self.submission_date,
+            'state': self.state.value,
+            'odds': self.odds,
+            'stake': self.stake,
+            'payout': self.payout
+        })
+
+    @staticmethod
+    def to_json_str_multiple(items: List[BetHistoryItem]) -> str:
+        return '[%s]' % ','.join([item.to_json_str() for item in items])
