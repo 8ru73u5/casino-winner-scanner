@@ -14,7 +14,8 @@ _proxy_countries = {
     'US': 'United States',
     'DE': 'Germany',
     'BR': 'Brazil',
-    'ES': 'Spain'
+    'ES': 'Spain',
+    'PL': 'Poland'
 }
 
 
