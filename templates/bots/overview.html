@@ -1,17 +1,94 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <h1 class="title is-3">Bot overview</h1>
-  <ul>
+  <div class="container is-fluid">
+    <h1 class="title is-2 has-text-centered">Bot overview</h1>
     {% for bot in bots %}
-      <li data-id="{{ bot.id }}">
-        <span class="username">{{ bot.username }}</span>
-        <span class="icon">
-          <img src="{{ url_for('static', filename='img/' + bot.bookmaker.name + '_icon.ico') }}"
-               alt="{{ bot.bookmaker.name }}">
-        </span>
-        <span class="country-code">{{ bot.proxy_country_code }}</span>
-      </li>
+      <div class="card mb-4 pt-2" data-id="{{ bot.id }}">
+        <div class="p-1" style="position: absolute; top: 0; right: 0;">
+          <a href="{{ url_for('bots.bot_history', bot_id=bot.id) }}" target="_blank" class="bet-history-link">
+            <span class="icon is-medium p-1 has-text-info" title="Go to bet history">
+              <i class="fas fa-chart-bar"></i>
+            </span>
+          </a>
+          <span role="button" class="icon is-medium p-1 has-text-danger delete-bot-button" title="Delete bot"
+                style="cursor: pointer;">
+            <i class="fas fa-trash-alt"></i>
+          </span>
+        </div>
+        <div class="card-content">
+          <div class="content">
+            <div class="columns">
+              <div class="column is-flex is-align-items-center">
+                <strong class="mr-2">Username:</strong> {{ bot.username }}
+              </div>
+              <div class="column is-flex is-align-items-center">
+                <strong class="mr-2">Bookmaker:</strong>
+                <span class="icon is-small">
+                  <img src="{{ url_for('static', filename='img/' + bot.bookmaker.name + '_icon.ico') }}"
+                       alt="{{ bot.bookmaker.name }}" title="{{ bot.bookmaker.name }}">
+                </span>
+              </div>
+              <div class="column is-flex is-align-items-center">
+                <strong class="mr-2">Balance:</strong> {{ bot.wallet_balance }}
+              </div>
+              <div class="column is-flex is-align-items-center">
+                <strong class="mr-2">Proxy country:</strong>
+                <div class="select">
+                  <select aria-label="Proxy country">
+                    {% for country_code, country_name in proxies.items() %}
+                      <option value="{{ country_code }}"
+                          {{ 'selected' if bot.proxy_country_code == country_code else '' }}>
+                        {{ country_name }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <div class="column is-flex is-align-items-center">
+                <strong class="mr-2">Is enabled:</strong>
+                <input type="checkbox" aria-label="Is enabled?" {{ 'checked' if bot.is_enabled else '' }}>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     {% endfor %}
-  </ul>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script>
+      document.querySelectorAll('input[type=checkbox], select').forEach(element => {
+          element.addEventListener('change', e => {
+              e.preventDefault();
+
+              const parent = element.closest('[data-id]');
+
+              const botId = parent.dataset.id;
+              const isEnabled = parent.querySelector('input[type=checkbox]').checked;
+              const countryCode = Array.from(parent.querySelectorAll('option'))
+                  .find(opt => opt.selected).value;
+
+              axios.patch('/bots/bot/' + botId, {
+                  is_enabled: isEnabled,
+                  country_code: countryCode
+              }).error(e => console.error('While patching bot:', e));
+          });
+      });
+
+      document.querySelectorAll('.delete-bot-button').forEach(element => {
+          element.addEventListener('click', e => {
+              e.preventDefault();
+
+              if (window.confirm('Are you sure to delete this bot?')) {
+                  const botId = element.closest('[data-id]').dataset.id;
+                  axios.delete('/bots/bot/' + botId)
+                      .then(() => window.location.reload())
+                      .error(e => console.error(e));
+              }
+          });
+      });
+  </script>
 {% endblock %}
