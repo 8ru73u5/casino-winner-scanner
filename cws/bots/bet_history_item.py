@@ -44,7 +44,6 @@ class BetHistoryItem:
         elif 'lost' in data['betsStatus']:
             state = BetHistoryItemState.LOST
         else:
-            print('Bet status:', data['betsStatus'])
             state = BetHistoryItemState.OPEN
 
         bet_data = data['systemBet']['selections'][0]
