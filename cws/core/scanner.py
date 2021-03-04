@@ -39,7 +39,7 @@ class Scanner:
         self.redis_manager = RedisManager()
         self.telegram_notifier = TelegramNotifier()
         self.bot_manager = BotManager(SessionLocal())
-        self._bot_manager_update_cycle = cycle(range(10))
+        self._bot_manager_update_cycle = cycle(range(2))
 
         self._load_enabled_filters()
         self._load_odds_options()
