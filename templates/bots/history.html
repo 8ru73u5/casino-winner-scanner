@@ -1,5 +1,43 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  Bot history page
+  <div class="container is-fluid mb-6">
+    <h1 class="title has-text-centered is-2">Bot's bet history</h1>
+    {% for history_item in bet_history %}
+      <div class="card mb-4 has-text-white {{ 'has-background-danger' if history_item.state == 'lost' else ('has-background-success' if history_item.state == 'won' else 'has-background-info') }}">
+        <div class="card-content">
+          <div class="content">
+            <div class="columns">
+              <div class="column is-2">
+                <strong>Date:</strong> {{ history_item.submission_date }}
+              </div>
+              <div class="column">
+                <strong>Event:</strong> {{ history_item.category_name }}: {{ history_item.event_name }}
+              </div>
+              <div class="column">
+                <strong>Market:</strong> {{ history_item.market_name }}: {{ history_item.selection_name }} ({{ '%.2f'|format(history_item.odds) }})
+              </div>
+              <div class="column is-1">
+                <strong>Stake:</strong> {{ '%.2f'|format(history_item.stake) }}
+              </div>
+              <div class="column is-2">
+                <strong>Payout:</strong>
+                {% if history_item.state == 'won' %}
+                  {{ '%.2f'|format(history_item.payout) }} (+{{ '%.2f'|format(history_item.profit) }})
+                {% elif history_item.state == 'lost' %}
+                  0.0 ({{ '%.2f'|format(history_item.profit) }})
+                {% else %}
+                  &horbar;
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 {% endblock %}

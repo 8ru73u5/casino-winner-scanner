@@ -1,3 +1,5 @@
+from json import loads
+
 from flask import Blueprint, render_template, request, current_app, redirect, url_for, flash
 from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -108,7 +110,12 @@ def add_bot():
 @bp.route('/bot/<int:bot_id>')
 @login_required
 def bot_history(bot_id):
-    return render_template('bots/history.html', bot_id=bot_id)
+    history = current_app.redis_manager.get_bet_bot_bet_history(bot_id)
+
+    if history is not None:
+        return render_template('bots/history.html', bet_history=loads(history))
+    else:
+        return '', 404
 
 
 @bp.route('/bot/<int:bot_id>', methods=('PATCH',))
