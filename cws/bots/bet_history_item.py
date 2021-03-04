@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from json import dumps
 from typing import Optional, List
@@ -19,11 +20,13 @@ class BetHistoryItem:
     category_name: str
     market_name: str
     selection_name: str
-    submission_date: str
+    submission_date: datetime
     state: BetHistoryItemState
     odds: float
     stake: float
     payout: Optional[float]
+
+    DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'
 
     @property
     def profit(self) -> Optional[float]:
@@ -41,6 +44,7 @@ class BetHistoryItem:
         elif 'lost' in data['betsStatus']:
             state = BetHistoryItemState.LOST
         else:
+            print('Bet status:', data['betsStatus'])
             state = BetHistoryItemState.OPEN
 
         bet_data = data['systemBet']['selections'][0]
@@ -51,7 +55,7 @@ class BetHistoryItem:
             category_name=bet_data['categoryName'],
             market_name=bet_data['marketName'],
             selection_name=bet_data['selectionName'],
-            submission_date=data['submissionDate'],
+            submission_date=datetime.strptime(data['submissionDate'], BetHistoryItem.DATE_FORMAT),
             state=state,
             odds=data['totalOdds'],
             stake=data['stake'],
@@ -64,7 +68,7 @@ class BetHistoryItem:
             'category_name': self.category_name,
             'market_name': self.market_name,
             'selection_name': self.selection_name,
-            'submission_date': self.submission_date,
+            'submission_date': self.submission_date.strftime('%Y-%m-%d %H:%M:%S'),
             'state': self.state.value,
             'odds': self.odds,
             'stake': self.stake,
