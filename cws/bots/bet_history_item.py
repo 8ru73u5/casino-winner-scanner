@@ -68,7 +68,8 @@ class BetHistoryItem:
             'state': self.state.value,
             'odds': self.odds,
             'stake': self.stake,
-            'payout': self.payout
+            'payout': self.payout,
+            'profit': self.profit
         })
 
     @staticmethod
