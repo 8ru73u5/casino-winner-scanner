@@ -8,6 +8,13 @@ from cws.views.auth import login_required
 
 bp = Blueprint('bots', __name__, url_prefix='/bots')
 
+_proxy_countries = {
+    'US': 'United States',
+    'DE': 'Germany',
+    'BR': 'Brazil',
+    'ES': 'Spain'
+}
+
 
 @bp.route('/')
 @login_required
@@ -26,14 +33,20 @@ def overview():
     if db_error:
         return '', 500
 
-    return render_template('bots/overview.html', bots=bots)
+    for bot in bots:
+        wb = current_app.redis_manager.get_bet_bot_wallet_balance(bot.id)
+
+        if wb is not None:
+            bot.wallet_balance = wb
+
+    return render_template('bots/overview.html', bots=bots, proxies=_proxy_countries)
 
 
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_bot():
     if request.method == 'GET':
-        return render_template('bots/add_bot.html')
+        return render_template('bots/add_bot.html', proxies=_proxy_countries)
 
     try:
         username = request.form['username']
@@ -64,7 +77,7 @@ def add_bot():
             bot_already_exists_error = True
         else:
             try:
-                bot_login = BetBot(username, password, bookmaker, country_code)
+                bot_login = BetBot(username, password, bookmaker, country_code, is_enabled=True)
                 bot_login.login()
             except BotInvalidCredentialsError:
                 bot_invalid_credentials_error = True
