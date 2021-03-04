@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <div class="container is-fluid">
+  <div class="container is-fluid mb-6">
     <h1 class="title is-2 has-text-centered">Bot overview</h1>
     {% for bot in bots %}
       <div class="card mb-4 pt-2" data-id="{{ bot.id }}">
