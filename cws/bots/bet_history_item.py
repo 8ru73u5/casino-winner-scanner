@@ -77,4 +77,7 @@ class BetHistoryItem:
 
     @staticmethod
     def to_json_str_multiple(items: List[BetHistoryItem]) -> str:
-        return '[%s]' % ','.join([item.to_json_str() for item in items])
+        if items is not None:
+            return '[%s]' % ','.join([item.to_json_str() for item in items])
+        else:
+            return '[]'
