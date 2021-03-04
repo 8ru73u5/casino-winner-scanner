@@ -67,7 +67,7 @@ class WalletBalance:
 
     @property
     def funds(self) -> str:
-        return f'{self.total_amount} {self.currency}'
+        return f'{self.total_amount:.2f} {self.currency}'
 
 
 def bet_login_required(method):
