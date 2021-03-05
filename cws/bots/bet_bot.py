@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from json import dumps
 from json.decoder import JSONDecodeError
-from typing import List
+from typing import List, Optional
 
 from requests import Session, HTTPError
 
@@ -148,7 +147,8 @@ class BetBot:
                 self.login(get_sportsbook_token=True)
 
     def login(self, get_sportsbook_token: bool = False):
-        self._reset_session()
+        if self.has_session():
+            self._reset_session()
 
         data = {
             'username': self._username,
@@ -233,24 +233,20 @@ class BetBot:
         return [BetHistoryItem.from_json(bet) for bet in r.json()['data']['coupons']]
 
     @bet_login_required
-    def place_bet(self, stake: float, odds: float, market_selection_id: str):
+    def place_bet(self, stake: float, odds: float, market_selection_id: str) -> Optional[List[dict]]:
         if self._sportsbook_token is None:
             self._get_sportsbook_token()
 
         data = {
-            'acceptOddsChanges': False,
-            'bets': [
-                {
-                    'stake': stake,
-                    'stakeForReview': 0,
-                    'betSelections': [
-                        {
-                            'marketSelectionId': market_selection_id,
-                            'odds': odds
-                        }
-                    ]
-                }
-            ]
+            'acceptOddsChanges': True,
+            'bets': [{
+                'stake': stake,
+                'stakeForReview': 0,
+                'betSelections': [{
+                    'marketSelectionId': market_selection_id,
+                    'odds': odds
+                }]
+            }]
         }
 
         headers = {'sportsbookToken': self._sportsbook_token}
@@ -258,7 +254,10 @@ class BetBot:
         print('Placing bet...', end=' ')
         r = self._get_session().post(self.bookmaker.url + '/api/sb/v1/coupons', headers=headers, json=data)
         r.raise_for_status()
-        print('done! Response:')
+        print('done!')
 
-        # TODO: Parse the response and extract success/failure information
-        print(dumps(r.json(), ensure_ascii=False, indent=2))
+        coupon = r.json()['couponStatus']
+        if coupon['couponStatusPollingResult'] == 'Success':
+            return None
+        else:
+            return coupon['couponPlacementErrors']
