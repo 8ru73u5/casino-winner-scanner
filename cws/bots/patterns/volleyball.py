@@ -156,7 +156,10 @@ class VolleyballMatcher(AbstractPatternMatcher):
             return
 
         if self.min_points_to_win_set == 0:
-            return next((ts.tip for ts in tip_group[0] if ts.tip.associated_player_id == self.set_leader.id), None)
+            return next((
+                ts.tip for ts in tip_group[0]
+                if ts.tip.associated_player_id == self.set_leader.id and ts.tip.bet_group_name_real == f'Set {self.current_set} Winner'
+            ), None)
 
     def _check_total_team_points(self, home_or_away: str) -> Optional[Tip]:
         assert home_or_away in ['home', 'away']
