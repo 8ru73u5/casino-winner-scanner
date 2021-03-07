@@ -234,6 +234,9 @@ class BetBot:
 
     @bet_login_required
     def place_bet(self, stake: float, odds: float, market_selection_id: str) -> Optional[List[dict]]:
+        if stake > self._wallet_balance.total_amount:
+            raise ValueError('Not enough funds!')
+
         if self._sportsbook_token is None:
             self._get_sportsbook_token()
 
