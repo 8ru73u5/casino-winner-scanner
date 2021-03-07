@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
-from typing import Optional, List, Tuple, Set
+from dataclasses import dataclass, field
+from typing import Optional, List, Tuple, Set, Dict
 
 from .errors import InvalidApiResponseError
 
@@ -19,8 +19,10 @@ class Event:
     first_team: TeamInfo
     second_team: TeamInfo
     tips: List[Tip]
-    phase_related_bet_names: Set[str]
-    current_phase_bet_names: Optional[Set[str]]
+    raw_api_response_data: dict
+    phase_related_bet_names: Set[str] = field(default_factory=set)
+    current_phase_bet_names: Optional[Set[str]] = None
+    deduced_current_phase: Optional[Dict[str, int]] = None
 
     SPORT_EMOJI = {
         1: '⚽️',
@@ -87,6 +89,7 @@ class Event:
 
         bet_names = {t.bet_group_name_real.lower() for t in self.tips}
         current_phase_bets = set()
+        self.deduced_current_phase = {}
 
         for phase_name in phase_names:
             phase_related_bets = [bet_name for bet_name in bet_names if phase_name in bet_name]
@@ -107,6 +110,7 @@ class Event:
             current_phase = min(x[1] for x in bet_names_with_phases)
             current_phase_bets.update(x[0] for x in bet_names_with_phases if x[1] == current_phase)
 
+            self.deduced_current_phase[phase_name] = current_phase
             self.phase_related_bet_names.update(x[0] for x in bet_names_with_phases)
 
         self.current_phase_bet_names = current_phase_bets
@@ -124,6 +128,12 @@ class Event:
             return True
         else:
             return bet_name in self.current_phase_bet_names
+
+    def deduce_current_phase(self) -> Dict[str, int]:
+        if self.deduced_current_phase is None:
+            self._generate_phase_related_bet_name_list()
+
+        return self.deduced_current_phase
 
     @staticmethod
     def from_json(data: dict) -> Event:
@@ -150,9 +160,10 @@ class Event:
                 sport_id=data['ci'],
                 sport_name=data['cn'],
                 league_name=data['scn'],
-                first_team=TeamInfo(name=data['epl'][0]['pn'], score=team1_score),
-                second_team=TeamInfo(name=data['epl'][1]['pn'], score=team2_score),
+                first_team=TeamInfo(id=data['epl'][0]['pi'], name=data['epl'][0]['pn'], score=team1_score),
+                second_team=TeamInfo(id=data['epl'][1]['pi'], name=data['epl'][1]['pn'], score=team2_score),
                 tips=Tip.from_json(data),
+                raw_api_response_data=data,
                 phase_related_bet_names=set(),
                 current_phase_bet_names=None
             )
@@ -176,8 +187,12 @@ class Event:
 
 @dataclass
 class TeamInfo:
+    id: int
     name: str
     score: Optional[int]
+
+    def __eq__(self, other: TeamInfo) -> bool:
+        return self.id == other.id
 
 
 @dataclass
@@ -192,6 +207,8 @@ class Tip:
     bet_group_name: str
     bet_group_name_real: str
     is_active: bool
+    selection_id: str
+    associated_player_id: Optional[int]
 
     BGN_TEMPLATE_REGEX = re.compile('#[^#]+#')
 
@@ -227,7 +244,9 @@ class Tip:
                         bet_group_id=bet_group_id,
                         bet_group_name=bet_group_name,
                         bet_group_name_real=bet_group_name_real,
-                        is_active=is_active
+                        is_active=is_active,
+                        selection_id=tip['msit'],
+                        associated_player_id=pid if (pid := tip['pi']) != 0 else None
                     ))
         except (KeyError, TypeError, ValueError) as e:
             raise InvalidApiResponseError(data, e)
