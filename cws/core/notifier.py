@@ -1,8 +1,10 @@
-from typing import List
+from json import dumps
+from typing import List, Optional
 
 from telegram import Bot, ParseMode
 from telegram.ext import messagequeue as mq
 
+from cws.api.models import Tip, Event
 from cws.config import AppConfig
 from cws.core.notification import Notification
 
@@ -42,3 +44,19 @@ class TelegramNotifier(Bot):
 
         for msg in TelegramNotifier.arrange_messages(messages):
             self.send_message(self.chat_id, msg, ParseMode.HTML)
+            
+    def send_placing_bet_confirmation(self, event: Event, tip: Tip, status: Optional[List[dict]]):
+        header = f'--- Bot 🤖\n{event.get_sport_name_or_emoji()} <b>{event.first_team.name} vs {event.second_team.name}</b>'
+        phase = f'Time: {event.get_time_or_phase()}'
+        score = f'Score: {event.get_score()}'
+        if event.has_score_info():
+            score += f' ({event.first_team.score + event.second_team.score})'
+        bet = f'Bet: {tip.bet_group_name_real}'
+        tip_info = f'Tip: {tip.name} ({tip.odds:.2f})'
+        status_info = 'Status: ' + 'SUCCESS' if status is None else dumps(status, ensure_ascii=False, indent=2)
+        
+        msg = '\n'.join([header, phase, score, bet, tip_info, status_info])
+
+        print(msg)
+        
+        self.send_message(self.chat_id, msg, ParseMode.HTML)
