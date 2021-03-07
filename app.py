@@ -33,7 +33,7 @@ def init_app(launch_core: bool = True):
 
         # Scheduler
         scheduler = APScheduler(app=app)
-        scheduler.add_job(func=scanner.cycle, trigger='interval', seconds=5, id='Scanner cycle')
+        scheduler.add_job(func=scanner.cycle, trigger='interval', seconds=2, id='Scanner cycle')
         scheduler.add_listener(status_monitor.scheduler_monitor, StatusMonitor.SUBSCRIBED_EVENTS)
         scheduler.start()
 

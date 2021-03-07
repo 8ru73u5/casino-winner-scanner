@@ -13,6 +13,7 @@ from sqlalchemy.sql.functions import coalesce
 from cws.api.casino_winner import CasinoWinnerApi as Api
 from cws.api.models import Event
 from cws.bots.bot_manager import BotManager
+from cws.bots.patterns.volleyball import VolleyballMatcher
 from cws.core.notification import Notification
 from cws.core.notifier import TelegramNotifier
 from cws.core.snapshots import EventSnapshot
@@ -39,7 +40,8 @@ class Scanner:
         self.redis_manager = RedisManager()
         self.telegram_notifier = TelegramNotifier()
         self.bot_manager = BotManager(SessionLocal())
-        self._bot_manager_update_cycle = cycle(range(2))
+        self._bot_manager_update_cycle = cycle(range(10))
+        self._placed_bets = set()
 
         self._load_enabled_filters()
         self._load_odds_options()
@@ -60,7 +62,29 @@ class Scanner:
             self.bot_manager.save_bots_info_to_redis()
 
         new_event_snapshots = self._make_snapshots(events, timestamp)
+        old_event_snapshots = self.event_snapshots
         self._update_snapshots(new_event_snapshots)
+
+        new_volleyball_snapshots = [s for s in new_event_snapshots.values() if s.event.sport_id == 9]
+        for new_snapshot in new_volleyball_snapshots:
+            old_snapshot = old_event_snapshots.get(new_snapshot.event.id)
+            if old_snapshot is not None:
+                matcher = VolleyballMatcher(new_snapshot, old_snapshot)
+                selections = matcher.check_for_matches()
+
+                for tip in selections:
+                    if tip.selection_id in self._placed_bets:
+                        continue
+
+                    self._placed_bets.add(tip.selection_id)
+                    for b in self.bot_manager.bots:
+                        try:
+                            response = b.place_bet(1, tip.odds, tip.selection_id)
+                        except ValueError:
+                            pass
+                        else:
+                            self.telegram_notifier.send_placing_bet_confirmation(new_snapshot.event, tip, response)
+
         self._generate_notifications()
 
     def _make_snapshots(self, events: List[Event], timestamp: datetime) -> Dict[int, EventSnapshot]:

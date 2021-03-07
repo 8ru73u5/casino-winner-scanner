@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Iterable
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -21,15 +21,15 @@ class BotManager:
         self.load_bots(log_in_bots=True)
 
     @property
-    def enabled_bots(self) -> List[BetBot]:
-        return [b for b in self._bots.values() if b.is_enabled]
+    def bots(self) -> Iterable[BetBot]:
+        return self._bots.values()
 
     def _get_bots_from_db(self) -> List[dbBetBot]:
         db_error = None
 
         bots = []
         try:
-            bots = self.session.query(dbBetBot).all()
+            bots = self.session.query(dbBetBot).filter(dbBetBot.is_enabled).all()
         except SQLAlchemyError as e:
             db_error = e
             self.session.rollback()
@@ -51,10 +51,9 @@ class BotManager:
             if b.id not in self._bots:
                 self._bots[b.id] = BetBot(b.username, b.password, b.bookmaker, b.proxy_country_code, b.is_enabled)
             else:
-                self._bots[b.id].is_enabled = b.is_enabled
                 self._bots[b.id].change_proxy_country_code(b.proxy_country_code)
 
-        # Remove bots that have been deleted from the database
+        # Remove bots that have been deleted from the database or disabled
         for bot_id in set(self._bots.keys()).difference(db_bot_ids):
             del self._bots[bot_id]
 
@@ -111,7 +110,7 @@ class BotManager:
 
     def save_bots_info_to_redis(self):
         wallet_balances = asyncio.run(self._get_bots_wallet_balance())
-        bet_histories = asyncio.run(self._get_bots_bet_history())
+        # bet_histories = asyncio.run(self._get_bots_bet_history())
 
         self.redis_manager.set_bet_bots_wallet_balance(wallet_balances)
-        self.redis_manager.set_bet_bots_bet_history(bet_histories)
+        # self.redis_manager.set_bet_bots_bet_history(bet_histories)
