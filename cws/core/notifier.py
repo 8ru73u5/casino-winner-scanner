@@ -5,6 +5,7 @@ from telegram import Bot, ParseMode
 from telegram.ext import messagequeue as mq
 
 from cws.api.models import Tip, Event
+from cws.bots.patterns.abstract_pattern_matcher import AbstractPatternMatcher
 from cws.config import AppConfig
 from cws.core.notification import Notification
 
@@ -18,6 +19,7 @@ class TelegramNotifier(Bot):
         self._is_messages_queued_default = True
         self._msg_queue = mq.MessageQueue(all_burst_limit=3, all_time_limit_ms=3500)
         self.chat_id = AppConfig.get(AppConfig.Variables.TELEGRAM_CHAT_ID)
+        self.bet_bot_chat_id = AppConfig.get(AppConfig.Variables.TELEGRAM_BET_BOT_CHAT_ID)
 
     @mq.queuedmessage
     def send_message(self, *args, **kwargs):
@@ -44,19 +46,24 @@ class TelegramNotifier(Bot):
 
         for msg in TelegramNotifier.arrange_messages(messages):
             self.send_message(self.chat_id, msg, ParseMode.HTML)
-            
-    def send_placing_bet_confirmation(self, event: Event, tip: Tip, status: Optional[List[dict]]):
-        header = f'--- Bot 🤖\n{event.get_sport_name_or_emoji()} <b>{event.first_team.name} vs {event.second_team.name}</b>'
+
+    def send_placing_bet_confirmation(self, event: Event, matcher: AbstractPatternMatcher, tip: Tip, status: Optional[List[dict]]):
+        header = f'{event.get_sport_name_or_emoji()} <b>{event.first_team.name} vs {event.second_team.name}</b>'
         phase = f'Time: {event.get_time_or_phase()}'
         score = f'Score: {event.get_score()}'
         if event.has_score_info():
             score += f' ({event.first_team.score + event.second_team.score})'
         bet = f'Bet: {tip.bet_group_name_real}'
         tip_info = f'Tip: {tip.name} ({tip.odds:.2f})'
-        status_info = 'Status: ' + 'SUCCESS' if status is None else dumps(status, ensure_ascii=False, indent=2)
-        
-        msg = '\n'.join([header, phase, score, bet, tip_info, status_info])
 
-        print(msg)
-        
-        self.send_message(self.chat_id, msg, ParseMode.HTML)
+        status_info = 'Status: '
+        if status is None:
+            status_info += '✅'
+        else:
+            status_info += '❌\nDetails:\n<pre>' + dumps(status, ensure_ascii=False, indent=1) + '</pre>'
+
+        matcher_dump = 'Dump:\n<pre>' + dumps(matcher.to_dict(), ensure_ascii=False, indent=1) + '</pre>'
+
+        msg = '\n'.join([header, phase, score, bet, tip_info, status_info, matcher_dump])
+
+        self.send_message(self.bet_bot_chat_id, msg, ParseMode.HTML)

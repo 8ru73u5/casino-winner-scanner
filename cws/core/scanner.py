@@ -13,12 +13,12 @@ from sqlalchemy.sql.functions import coalesce
 from cws.api.casino_winner import CasinoWinnerApi as Api
 from cws.api.models import Event
 from cws.bots.bot_manager import BotManager
-from cws.bots.patterns.volleyball import VolleyballMatcher
+from cws.bots.patterns import get_supported_sports, get_matcher
 from cws.core.notification import Notification
 from cws.core.notifier import TelegramNotifier
 from cws.core.snapshots import EventSnapshot
 from cws.database import SessionLocal
-from cws.models import Sport, Market, Bet, AppOption
+from cws.models import Sport, Market, Bet, AppOption, BettingBotHistory
 from cws.redis_manager import RedisManager
 
 
@@ -65,12 +65,23 @@ class Scanner:
         old_event_snapshots = self.event_snapshots
         self._update_snapshots(new_event_snapshots)
 
-        new_volleyball_snapshots = [s for s in new_event_snapshots.values() if s.event.sport_id == 9]
-        for new_snapshot in new_volleyball_snapshots:
+        supported_sports = get_supported_sports()
+        snapshots = [s for s in new_event_snapshots.values() if s.event.sport_id in supported_sports]
+        betting_history = []
+
+        for new_snapshot in snapshots:
             old_snapshot = old_event_snapshots.get(new_snapshot.event.id)
             if old_snapshot is not None:
-                matcher = VolleyballMatcher(new_snapshot, old_snapshot)
-                selections = matcher.check_for_matches()
+                try:
+                    matcher = get_matcher(new_snapshot.event.sport_id, new_snapshot, old_snapshot)
+
+                    if matcher is None:
+                        continue
+
+                    selections = matcher.check_for_matches()
+                except Exception as e:
+                    print('Error occurred while matching:', e)
+                    continue
 
                 for tip in selections:
                     if tip.selection_id in self._placed_bets:
@@ -83,7 +94,32 @@ class Scanner:
                         except ValueError:
                             pass
                         else:
-                            self.telegram_notifier.send_placing_bet_confirmation(new_snapshot.event, tip, response)
+                            event = new_snapshot.event
+                            self.telegram_notifier.send_placing_bet_confirmation(event, matcher, tip, response)
+                            betting_history.append(BettingBotHistory(
+                                event_name=f'{event.get_sport_name_or_emoji()} {event.first_team.name} {event.second_team.name}',
+                                market_name=tip.bet_group_name_real,
+                                selection_name=tip.name,
+                                stake=1,
+                                success=response is None,
+                                details=matcher.to_dict(),
+                                bookmaker_response=response
+                            ))
+
+        db_error = None
+
+        try:
+            for bh in betting_history:
+                self.session.add(bh)
+            self.session.commit()
+        except SQLAlchemyError as e:
+            db_error = e
+            self.session.rollback()
+        finally:
+            self.session.close()
+
+        if db_error is not None:
+            raise db_error
 
         self._generate_notifications()
 

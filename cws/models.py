@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import Optional, Any
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, ForeignKeyConstraint, Enum as sql_Enum, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, ForeignKeyConstraint, Enum as sql_Enum, UniqueConstraint, DateTime, Float
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import relationship, Session
@@ -111,6 +112,22 @@ class BettingBot(Base):
     bookmaker = Column(sql_Enum(BookmakerType), nullable=False)
     is_enabled = Column(Boolean, nullable=False, default=True)
     proxy_country_code = Column(String(5), nullable=False, default='US')
+
+
+class BettingBotHistory(Base):
+    __tablename__ = 'betting_bot_history'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    event_name = Column(String(500), nullable=False)
+    market_name = Column(String(100), nullable=False)
+    selection_name = Column(String(100), nullable=False)
+    stake = Column(Float, nullable=False)
+    submission_date = Column(DateTime, nullable=False, default=datetime.utcnow)
+    success = Column(Boolean, nullable=False)
+    details = Column(JSONB, nullable=False)
+    bookmaker_response = Column(JSONB, nullable=True, default=None)
+
+    bot_id = Column(Integer, ForeignKey('betting_bots.id'), nullable=False)
 
 
 class AppOption(Base):

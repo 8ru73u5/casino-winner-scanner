@@ -28,12 +28,24 @@ class Team:
     def how_many_points_has_scored(self) -> int:
         return self.previous_total_points - self.total_points
 
+    def to_dict(self) -> dict:
+        return {
+            'name': self.name,
+            'sets_won': self.sets_won,
+            'current_set_points': self.set_points,
+            'total_points_current_scan': self.total_points,
+            'total_points_previous_scan': self.previous_total_points
+        }
+
 
 class VolleyballMatcher(AbstractPatternMatcher):
+    SPORT_ID = 9
+
     def _parse_event(self):
         self.first_team = Team(self._event.first_team)
         self.second_team = Team(self._event.second_team)
         self.current_set = self._event.raw_api_response_data['sb']['gcp']['gpi']
+        assert 5 >= self.current_set >= 1
 
         for x in self._event.raw_api_response_data['sb']['gsl']:
             if x['gpn'].endswith('Set'):
@@ -41,13 +53,13 @@ class VolleyballMatcher(AbstractPatternMatcher):
                 score = int(x['v'])
 
                 if self.first_team.id == x['spi']:
-                    self.first_team.total_points += score
-                    if set_number == self.current_set:
-                        self.first_team.set_points = score
+                    team = self.first_team
                 else:
-                    self.second_team.total_points += score
-                    if set_number == self.current_set:
-                        self.second_team.set_points = score
+                    team = self.second_team
+
+                team.total_points += score
+                if set_number == self.current_set:
+                    team.set_points = score
 
         for x in self._previous_event.raw_api_response_data['sb']['gsl']:
             if x['gpn'].endswith('Set'):
@@ -62,7 +74,7 @@ class VolleyballMatcher(AbstractPatternMatcher):
         self.set_points_diff = abs(self.first_team.set_points - self.second_team.set_points)
 
         self.set_leader = max((self.first_team, self.second_team), key=lambda t: t.set_points)
-        self.min_sets_to_win = 3 - max(self._event.first_team.score, self._event.second_team.score)
+        self.min_sets_to_win = 3 - max(self.first_team.sets_won, self.second_team.sets_won)
 
         margin = 24 if self.current_set != 5 else 14
         self.is_margin_score = self.first_team.set_points >= margin and self.second_team.set_points >= margin
@@ -74,6 +86,19 @@ class VolleyballMatcher(AbstractPatternMatcher):
                 self.min_points_to_win_set = 15 - self.set_leader.set_points
             else:
                 self.min_points_to_win_set = 25 - self.set_leader.set_points
+
+    def to_dict(self) -> dict:
+        return {
+            'home': self.first_team.to_dict(),
+            'away': self.second_team.to_dict(),
+            'current_set': self.current_set,
+            'game_total_points': self.game_total_points,
+            'set_total_points': self.set_total_points,
+            'set_points_diff': self.set_points_diff,
+            'sets_to_win_game': self.min_sets_to_win,
+            'points_to_win_set': self.min_points_to_win_set,
+            'margin_score': self.is_margin_score,
+        }
 
     def check_for_matches(self) -> List[Tip]:
         selection_ids = [
@@ -115,7 +140,7 @@ class VolleyballMatcher(AbstractPatternMatcher):
         if under_tip is not None:
             under_points = float(under_tip.name.split()[1])
 
-            if self.min_points_to_win_set == 0 and under_points > self.set_total_points:
+            if not self.is_margin_score and self.min_points_to_win_set == 0 and under_points > self.set_total_points:
                 return under_tip
 
     def _check_total_game_points(self) -> Optional[Tip]:
@@ -144,21 +169,23 @@ class VolleyballMatcher(AbstractPatternMatcher):
         if under_tip is not None:
             under_points = float(under_tip.name.split()[1])
 
-            if self.current_set == 5 and self.min_points_to_win_set == 0 and under_points > self.game_total_points:
+            if self.current_set == 5 and not self.is_margin_score and self.min_points_to_win_set == 0 and under_points > self.game_total_points:
                 return under_tip
 
     def _check_set_winner(self) -> Optional[Tip]:
         market_id = 197
         bet_id = 2245
 
-        tip_group = self.get_tip_groups(market_id, bet_id)
-        if tip_group is None or len(tip_group) != 1:
+        tip_groups = self.get_tip_groups(market_id, bet_id)
+        if tip_groups is None or len(tip_groups) != 1:
             return
+
+        min_tip_group = min(tip_groups, key=lambda tg: int(tg[0].tip.bet_group_name_real.split()[1]))
 
         if self.min_points_to_win_set == 0:
             return next((
-                ts.tip for ts in tip_group[0]
-                if ts.tip.associated_player_id == self.set_leader.id and ts.tip.bet_group_name_real == f'Set {self.current_set} Winner'
+                ts.tip for ts in min_tip_group
+                if ts.tip.associated_player_id == self.set_leader.id
             ), None)
 
     def _check_total_team_points(self, home_or_away: str) -> Optional[Tip]:
@@ -175,7 +202,6 @@ class VolleyballMatcher(AbstractPatternMatcher):
             return
 
         over_tip = next((ts.tip for ts in tip_group[0] if ts.tip.name.startswith('Over')), None)
-        under_tip = next((ts.tip for ts in tip_group[0] if ts.tip.name.startswith('Under')), None)
 
         team = self.first_team if home_or_away == 'home' else self.second_team
 
@@ -184,12 +210,6 @@ class VolleyballMatcher(AbstractPatternMatcher):
 
             if self.min_sets_to_win == 0 and team.total_points >= over_points:
                 return over_tip
-
-        if under_tip is not None:
-            under_points = float(under_tip.name.split()[1])
-
-            if self.current_set == 5 and self.min_points_to_win_set == 0 and under_points > team.total_points:
-                return under_tip
 
     def _check_set_points_winner(self) -> Optional[Tip]:
         market_id = 199
@@ -229,5 +249,5 @@ class VolleyballMatcher(AbstractPatternMatcher):
         min_goal_group = min(tip_group, key=lambda ts: int(ts[0].tip.bet_group_name_real.split()[-2]))
         goal = int(min_goal_group[0].tip.bet_group_name_real.split()[-2])
 
-        if self.set_leader.set_points == goal:
+        if self.set_leader.set_points == goal and self.first_team.set_points != self.second_team.set_points:
             return next((ts.tip for ts in min_goal_group if ts.tip.associated_player_id == self.set_leader.id), None)

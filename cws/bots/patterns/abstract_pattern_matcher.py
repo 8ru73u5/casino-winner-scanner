@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
 
+from cws.api.models import Tip
 from cws.core.snapshots import EventSnapshot, TipSnapshot
 
 
@@ -19,7 +20,11 @@ class AbstractPatternMatcher(ABC):
         pass
 
     @abstractmethod
-    def check_for_matches(self):
+    def check_for_matches(self) -> List[Tip]:
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> dict:
         pass
 
     def get_tip_groups(self, market_id: int, bet_id: int) -> Optional[List[List[TipSnapshot]]]:

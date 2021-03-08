@@ -15,6 +15,7 @@ class AppConfig:
         REDIS_PORT = 'REDIS_PORT', int
         TELEGRAM_TOKEN = 'CWS_TELEGRAM_TOKEN', str
         TELEGRAM_CHAT_ID = 'CWS_TELEGRAM_CHAT_ID', str
+        TELEGRAM_BET_BOT_CHAT_ID = 'CWS_TELEGRAM_BET_BOT_CHAT_ID', str
         WEBSHARE_API_TOKEN = 'WEBSHARE_API_TOKEN', str
 
     _vars = {}
