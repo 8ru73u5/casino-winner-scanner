@@ -109,7 +109,7 @@ class TableTennisMatcher(AbstractPatternMatcher):
         if tip_groups is None:
             return
 
-        min_tip_group = min(tip_groups, key=lambda tg: int(tg.tip.bet_group_name_real.split()[1]))
+        min_tip_group = min(tip_groups, key=lambda tg: int(tg[0].tip.bet_group_name_real.split()[1]))
 
         over_tip = next((ts.tip for ts in min_tip_group if ts.tip.name.startswith('Over')), None)
         under_tip = next((ts.tip for ts in min_tip_group if ts.tip.name.startswith('Under')), None)
@@ -203,7 +203,7 @@ class TableTennisMatcher(AbstractPatternMatcher):
         if len(current_set_tip_groups) == 0:
             return
 
-        min_goal_tip_group = min(current_set_tip_groups, key=lambda tg: int(tg.tip.bet_group_name_real.split()[-2]))
+        min_goal_tip_group = min(current_set_tip_groups, key=lambda tg: int(tg[0].tip.bet_group_name_real.split()[-2]))
 
         if self.first_player.has_scored_any_points() ^ self.second_player.has_scored_any_points():
             goal = int(min_goal_tip_group[0].tip.bet_group_name_real.split()[-2])
