@@ -176,15 +176,16 @@ class VolleyballMatcher(AbstractPatternMatcher):
         market_id = 197
         bet_id = 2245
 
-        tip_groups = self.get_tip_groups(market_id, bet_id)
-        if tip_groups is None or len(tip_groups) != 1:
+        tip_group = self.get_tip_groups(market_id, bet_id)
+        if tip_group is None or len(tip_group) != 1:
             return
 
-        min_tip_group = min(tip_groups, key=lambda tg: int(tg[0].tip.bet_group_name_real.split()[1]))
+        if int(tip_group[0][0].tip.bet_group_name_real.split()[1]) != self.current_set:
+            return
 
         if self.min_points_to_win_set == 0:
             return next((
-                ts.tip for ts in min_tip_group
+                ts.tip for ts in tip_group[0]
                 if ts.tip.associated_player_id == self.set_leader.id
             ), None)
 
