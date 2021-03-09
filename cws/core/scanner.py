@@ -72,25 +72,21 @@ class Scanner:
         for new_snapshot in snapshots:
             old_snapshot = old_event_snapshots.get(new_snapshot.event.id)
             if old_snapshot is not None:
-                try:
-                    matcher = get_matcher(new_snapshot.event.sport_id, new_snapshot, old_snapshot)
+                matcher = get_matcher(new_snapshot.event.sport_id, new_snapshot, old_snapshot)
 
-                    if matcher is None:
-                        continue
-
-                    selections = matcher.check_for_matches()
-                except Exception as e:
-                    print('Error occurred while matching:', e)
+                if matcher is None:
                     continue
+
+                selections = matcher.check_for_matches()
 
                 for tip in selections:
                     if tip.selection_id in self._placed_bets:
                         continue
 
                     self._placed_bets.add(tip.selection_id)
-                    for b in self.bot_manager.bots:
+                    for bot_id, bot in self.bot_manager.bots.items():
                         try:
-                            response = b.place_bet(1, tip.odds, tip.selection_id)
+                            response = bot.place_bet(1, tip.odds, tip.selection_id)
                         except ValueError:
                             pass
                         else:
@@ -103,23 +99,25 @@ class Scanner:
                                 stake=1,
                                 success=response is None,
                                 details=matcher.to_dict(),
-                                bookmaker_response=response
+                                bookmaker_response=response,
+                                bot_id=bot_id
                             ))
 
-        db_error = None
+        if len(betting_history) > 0:
+            db_error = None
 
-        try:
-            for bh in betting_history:
-                self.session.add(bh)
-            self.session.commit()
-        except SQLAlchemyError as e:
-            db_error = e
-            self.session.rollback()
-        finally:
-            self.session.close()
+            try:
+                for bh in betting_history:
+                    self.session.add(bh)
+                self.session.commit()
+            except SQLAlchemyError as e:
+                db_error = e
+                self.session.rollback()
+            finally:
+                self.session.close()
 
-        if db_error is not None:
-            raise db_error
+            if db_error is not None:
+                raise db_error
 
         self._generate_notifications()
 
