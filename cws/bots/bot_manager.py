@@ -1,5 +1,5 @@
 import asyncio
-from typing import List, Dict, Tuple, Optional, Iterable
+from typing import List, Dict, Tuple, Optional
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -11,18 +11,14 @@ from cws.redis_manager import RedisManager
 
 
 class BotManager:
-    _bots: Dict[int, BetBot]
+    bots: Dict[int, BetBot]
 
     def __init__(self, session: Session):
         self.session = session
         self.redis_manager = RedisManager()
 
-        self._bots = {}
+        self.bots = {}
         self.load_bots(log_in_bots=True)
-
-    @property
-    def bots(self) -> Iterable[BetBot]:
-        return self._bots.values()
 
     def _get_bots_from_db(self) -> List[dbBetBot]:
         db_error = None
@@ -48,20 +44,20 @@ class BotManager:
         for b in bots:
             db_bot_ids.add(b.id)
 
-            if b.id not in self._bots:
-                self._bots[b.id] = BetBot(b.username, b.password, b.bookmaker, b.proxy_country_code, b.is_enabled)
+            if b.id not in self.bots:
+                self.bots[b.id] = BetBot(b.username, b.password, b.bookmaker, b.proxy_country_code, b.is_enabled)
             else:
-                self._bots[b.id].change_proxy_country_code(b.proxy_country_code)
+                self.bots[b.id].change_proxy_country_code(b.proxy_country_code)
 
         # Remove bots that have been deleted from the database or disabled
-        for bot_id in set(self._bots.keys()).difference(db_bot_ids):
-            del self._bots[bot_id]
+        for bot_id in set(self.bots.keys()).difference(db_bot_ids):
+            del self.bots[bot_id]
 
         if log_in_bots:
             asyncio.run(self._log_in_bots())
 
     async def _log_in_bots(self):
-        logged_off_bots = [bot for bot in self._bots.values() if not bot.has_session()]
+        logged_off_bots = [bot for bot in self.bots.values() if not bot.has_session()]
 
         if len(logged_off_bots) == 0:
             return
@@ -86,7 +82,7 @@ class BotManager:
 
         futures = [
             loop.run_in_executor(None, get_wallet_balance, bot_id, bot)
-            for bot_id, bot in self._bots.items()
+            for bot_id, bot in self.bots.items()
         ]
 
         return {bot_id: wallet_balance for bot_id, wallet_balance in await asyncio.gather(*futures)}
@@ -103,7 +99,7 @@ class BotManager:
 
         futures = [
             loop.run_in_executor(None, get_bet_history, bot_id, bot)
-            for bot_id, bot in self._bots.items()
+            for bot_id, bot in self.bots.items()
         ]
 
         return {bot_id: bet_history for bot_id, bet_history in await asyncio.gather(*futures)}
