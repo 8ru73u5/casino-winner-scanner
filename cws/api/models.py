@@ -49,6 +49,7 @@ class Event:
         9: ['set'],
         11: ['set', 'game'],
         17: ['frame'],
+        60: ['set'],
         119: ['map'],
         138: ['set' 'game']
     }
