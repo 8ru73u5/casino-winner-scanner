@@ -72,7 +72,12 @@ class Scanner:
         for new_snapshot in snapshots:
             old_snapshot = old_event_snapshots.get(new_snapshot.event.id)
             if old_snapshot is not None:
-                matcher = get_matcher(new_snapshot.event.sport_id, new_snapshot, old_snapshot)
+                # noinspection PyBroadException
+                try:
+                    matcher = get_matcher(new_snapshot.event.sport_id, new_snapshot, old_snapshot)
+                except Exception as e:
+                    print('ERROR while creating matcher:', e)
+                    continue
 
                 if matcher is None:
                     continue
