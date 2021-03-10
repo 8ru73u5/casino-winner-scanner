@@ -108,7 +108,8 @@ class VolleyballMatcher(AbstractPatternMatcher):
             self._check_total_team_points('away'),
             self._check_set_winner(),
             self._check_set_points_winner(),
-            self._check_set_race_to_points()
+            self._check_set_race_to_points(),
+            self._check_set_odd_even_points()
         ]
 
         return [x for x in selection_ids if x is not None]
@@ -248,3 +249,29 @@ class VolleyballMatcher(AbstractPatternMatcher):
 
         if self.set_leader.set_points == goal and self.first_team.set_points != self.second_team.set_points:
             return next((ts.tip for ts in min_goal_group if ts.tip.associated_player_id == self.set_leader.id), None)
+
+    def _check_set_odd_even_points(self) -> Optional[Tip]:
+        if self.min_points_to_win_set != 0:
+            return
+
+        market_id = 68
+        bet_id = 4832
+
+        tip_groups = self.get_tip_groups(market_id, bet_id)
+        if tip_groups is None:
+            return
+
+        current_set_group = next(
+            (tg for tg in tip_groups if int(tg[0].tip.bet_group_name_real.split()[1]) == self.current_set),
+            None
+        )
+
+        if current_set_group is None:
+            return
+
+        if self.set_total_points % 2 == 0:
+            tip_name = 'Even'
+        else:
+            tip_name = 'Odd'
+
+        return next((t for t in current_set_group if t.tip.name == tip_name), None)
