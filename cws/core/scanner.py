@@ -96,7 +96,7 @@ class Scanner:
                             pass
                         else:
                             event = new_snapshot.event
-                            self.telegram_notifier.send_placing_bet_confirmation(event, matcher, tip, response)
+                            self.telegram_notifier.send_placing_bet_confirmation(event, tip, response)
                             betting_history.append(BettingBotHistory(
                                 event_name=f'{event.get_sport_name_or_emoji()} {event.first_team.name} vs {event.second_team.name}',
                                 market_name=tip.bet_group_name_real,
