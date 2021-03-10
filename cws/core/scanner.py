@@ -101,11 +101,13 @@ class Scanner:
                                 event_name=f'{event.get_sport_name_or_emoji()} {event.first_team.name} vs {event.second_team.name}',
                                 market_name=tip.bet_group_name_real,
                                 selection_name=tip.name,
+                                odds=tip.odds,
                                 stake=1,
                                 success=response is None,
                                 details=matcher.to_dict(),
                                 bookmaker_response=response,
-                                bot_id=bot_id
+                                bot_id=bot_id,
+                                sport_id=event.sport_id
                             ))
 
         if len(betting_history) > 0:

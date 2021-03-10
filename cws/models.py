@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from json import dumps
 from typing import Optional, Any
 
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, ForeignKeyConstraint, Enum as sql_Enum, UniqueConstraint, DateTime, Float
@@ -122,12 +123,23 @@ class BettingBotHistory(Base):
     market_name = Column(String(100), nullable=False)
     selection_name = Column(String(100), nullable=False)
     stake = Column(Float, nullable=False)
+    odds = Column(Float, nullable=False)
     submission_date = Column(DateTime, nullable=False, default=datetime.utcnow)
     success = Column(Boolean, nullable=False)
     details = Column(JSONB, nullable=False)
     bookmaker_response = Column(JSONB, nullable=True, default=None)
 
     bot_id = Column(Integer, ForeignKey('betting_bots.id'), nullable=False)
+    sport_id = Column(Integer, ForeignKey('sports.id'), nullable=False)
+
+    @property
+    def details_pretty(self) -> str:
+        return dumps(self.details, ensure_ascii=False, indent=2)
+
+    @property
+    def bookmaker_response_pretty(self) -> Optional[str]:
+        if self.bookmaker_response is not None:
+            return dumps(self.bookmaker_response, ensure_ascii=False, indent=2)
 
 
 class AppOption(Base):

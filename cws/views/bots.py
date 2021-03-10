@@ -1,11 +1,9 @@
-from json import loads
-
 from flask import Blueprint, render_template, request, current_app, redirect, url_for, flash
 from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
 from cws.bots.bet_bot import BookmakerType, BetBot, BotInvalidCredentialsError
-from cws.models import BettingBot
+from cws.models import BettingBot, BettingBotHistory
 from cws.views.auth import login_required
 
 bp = Blueprint('bots', __name__, url_prefix='/bots')
@@ -111,12 +109,32 @@ def add_bot():
 @bp.route('/bot/<int:bot_id>')
 @login_required
 def bot_history(bot_id):
-    history = current_app.redis_manager.get_bet_bot_bet_history(bot_id)
+    db_error = False
+    not_found_error = False
 
-    if history is not None:
-        return render_template('bots/history.html', bet_history=loads(history))
-    else:
+    history = []
+    try:
+        bot = current_app.session.query(BettingBot).get(bot_id)
+
+        if bot is None:
+            not_found_error = True
+        else:
+            history = current_app.session.query(BettingBotHistory) \
+                .filter(BettingBotHistory.bot_id == bot_id) \
+                .order_by(BettingBotHistory.id.desc()) \
+                .limit(50).all()
+    except SQLAlchemyError:
+        db_error = True
+        current_app.session.rollback()
+    finally:
+        current_app.session.close()
+
+    if db_error:
+        return '', 500
+    elif not_found_error:
         return '', 404
+    else:
+        return render_template('bots/history.html', bet_history=history)
 
 
 @bp.route('/bot/<int:bot_id>', methods=('PATCH',))
