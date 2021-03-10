@@ -3,9 +3,10 @@ from typing import Optional, Iterable
 from .abstract_pattern_matcher import AbstractPatternMatcher
 from .table_tennis import TableTennisMatcher
 from .volleyball import VolleyballMatcher
+from .basketball import BasketballMatcher
 from ...core.snapshots import EventSnapshot
 
-_matcher_list = [VolleyballMatcher, TableTennisMatcher]
+_matcher_list = [VolleyballMatcher, TableTennisMatcher, BasketballMatcher]
 assert all(matcher.SPORT_ID is not None for matcher in _matcher_list)
 
 _matcher_sports = {matcher.SPORT_ID: matcher for matcher in _matcher_list}
