@@ -111,6 +111,9 @@ class TableTennisMatcher(AbstractPatternMatcher):
 
         min_tip_group = min(tip_groups, key=lambda tg: int(tg[0].tip.bet_group_name_real.split()[1]))
 
+        if int(min_tip_group[0].tip.bet_group_name_real.split()[1]) != self.current_set:
+            return
+
         over_tip = next((ts.tip for ts in min_tip_group if ts.tip.name.startswith('Over')), None)
         under_tip = next((ts.tip for ts in min_tip_group if ts.tip.name.startswith('Under')), None)
 
@@ -139,12 +142,12 @@ class TableTennisMatcher(AbstractPatternMatcher):
 
         if over_tip is not None:
             over_points = float(over_tip.name.split()[1])
-            remaining_points = ceil(over_points - self.game_total_points)
+            remaining_points = over_points - self.game_total_points
 
             if self.min_sets_to_win == 0 and self.game_total_points >= over_points:
                 return over_tip
 
-            min_points_to_win_match = self.min_points_to_win_set + (1 - self.min_points_to_win_set) * 11
+            min_points_to_win_match = self.min_points_to_win_set + (1 - self.min_sets_to_win) * 11
 
             if min_points_to_win_match >= remaining_points:
                 return over_tip
@@ -158,6 +161,9 @@ class TableTennisMatcher(AbstractPatternMatcher):
             return
 
         min_tip_group = min(tip_groups, key=lambda tg: int(tg[0].tip.bet_group_name_real.split()[1]))
+
+        if int(min_tip_group[0].tip.bet_group_name_real.split()[1]) != self.current_set:
+            return
 
         if self.min_points_to_win_set == 0:
             return next((

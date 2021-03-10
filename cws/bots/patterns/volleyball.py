@@ -152,11 +152,10 @@ class VolleyballMatcher(AbstractPatternMatcher):
             return
 
         over_tip = next((ts.tip for ts in tip_group[0] if ts.tip.name.startswith('Over')), None)
-        under_tip = next((ts.tip for ts in tip_group[0] if ts.tip.name.startswith('Under')), None)
 
         if over_tip is not None:
             over_points = float(over_tip.name.split()[1])
-            remaining_points = ceil(over_points - self.game_total_points)
+            remaining_points = over_points - self.game_total_points
 
             if self.min_sets_to_win == 0 and self.game_total_points >= over_points:
                 return over_tip
@@ -166,26 +165,22 @@ class VolleyballMatcher(AbstractPatternMatcher):
             if min_points_to_win_match >= remaining_points:
                 return over_tip
 
-        if under_tip is not None:
-            under_points = float(under_tip.name.split()[1])
-
-            if self.current_set == 5 and not self.is_margin_score and self.min_points_to_win_set == 0 and under_points > self.game_total_points:
-                return under_tip
-
     def _check_set_winner(self) -> Optional[Tip]:
         market_id = 197
         bet_id = 2245
 
-        tip_group = self.get_tip_groups(market_id, bet_id)
-        if tip_group is None or len(tip_group) != 1:
+        tip_groups = self.get_tip_groups(market_id, bet_id)
+        if tip_groups is None:
             return
 
-        if int(tip_group[0][0].tip.bet_group_name_real.split()[1]) != self.current_set:
+        min_tip_group = min(tip_groups, key=lambda tg: int(tg[0].tip.bet_group_name_real.split()[1]))
+
+        if int(min_tip_group[0].tip.bet_group_name_real.split()[1]) != self.current_set:
             return
 
         if self.min_points_to_win_set == 0:
             return next((
-                ts.tip for ts in tip_group[0]
+                ts.tip for ts in min_tip_group
                 if ts.tip.associated_player_id == self.set_leader.id
             ), None)
 
@@ -203,7 +198,6 @@ class VolleyballMatcher(AbstractPatternMatcher):
             return
 
         over_tip = next((ts.tip for ts in tip_group[0] if ts.tip.name.startswith('Over')), None)
-
         team = self.first_team if home_or_away == 'home' else self.second_team
 
         if over_tip is not None:
@@ -222,16 +216,18 @@ class VolleyballMatcher(AbstractPatternMatcher):
             5: 2268
         }
 
-        tip_group = self.get_tip_groups(market_id, bet_ids[self.current_set])
-        if tip_group is None or len(tip_group) != 1:
+        tip_groups = self.get_tip_groups(market_id, bet_ids[self.current_set])
+        if tip_groups is None:
             return
 
+        min_goal_tip_group = min(tip_groups, key=lambda tg: int(tg[0].tip.bet_group_name_real.split()[-2]))
+
         if self.first_team.has_scored_any_points() ^ self.second_team.has_scored_any_points():
-            goal = int(tip_group[0][0].tip.bet_group_name_real.split()[-2])
+            goal = int(min_goal_tip_group[0].tip.bet_group_name_real.split()[-2])
 
             if self.set_total_points == goal:
                 scorer = self.first_team if self.first_team.has_scored_any_points() else self.second_team
-                return next((ts.tip for ts in tip_group[0] if ts.tip.associated_player_id == scorer.id), None)
+                return next((ts.tip for ts in min_goal_tip_group if ts.tip.associated_player_id == scorer.id), None)
 
     def _check_set_race_to_points(self) -> Optional[Tip]:
         market_id = 199
