@@ -109,7 +109,8 @@ class VolleyballMatcher(AbstractPatternMatcher):
             self._check_set_winner(),
             self._check_set_points_winner(),
             self._check_set_race_to_points(),
-            self._check_set_odd_even_points()
+            self._check_set_odd_even_points(),
+            self._check_set_points_handicap()
         ]
 
         return [x for x in selection_ids if x is not None]
@@ -275,3 +276,37 @@ class VolleyballMatcher(AbstractPatternMatcher):
             tip_name = 'Odd'
 
         return next((t for t in current_set_group if t.tip.name == tip_name), None)
+
+    def _check_set_points_handicap(self) -> Optional[Tip]:
+        market_id = 199
+        bet_ids = {
+            1: 2249,
+            2: 2253,
+            3: 2257,
+            4: 2261,
+            5: 2265
+        }
+
+        tip_groups = self.get_tip_groups(market_id, bet_ids[self.current_set])
+        if tip_groups is None or len(tip_groups) != 1:
+            return
+
+        home_handicap, away_handicap = [
+            float(x) for x in tip_groups[0][0].tip.template_value.split(' - ')
+        ]
+
+        if home_handicap > away_handicap:
+            handicap_benefactor = self.first_team
+            handicap = home_handicap
+        else:
+            handicap_benefactor = self.second_team
+            handicap = away_handicap
+
+        set_max_score = 25 if self.current_set != 5 else 15
+
+        if self.is_margin_score or self.min_points_to_win_set == 0 or \
+                handicap_benefactor.set_points + handicap > set_max_score:
+            return next(
+                (t for t in tip_groups[0] if t.tip.associated_player_id == handicap_benefactor.id),
+                None
+            )
