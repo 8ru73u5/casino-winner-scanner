@@ -13,6 +13,7 @@ class Team:
     total_points: int
     previous_total_points: int
     current_phase_points: int = 0
+    previous_phase_points: Optional[int] = None
 
     def __init__(self, team_info: TeamInfo, previous_team_info: TeamInfo):
         self.id = team_info.id
@@ -25,7 +26,8 @@ class Team:
             'name': self.name,
             'total_points': self.total_points,
             'previous_total_points': self.previous_total_points,
-            'current_phase_points': self.current_phase_points
+            'current_phase_points': self.current_phase_points,
+            'previous_phase_points': self.previous_phase_points
         }
 
     def has_scored_any_points(self) -> bool:
@@ -43,9 +45,11 @@ class BasketballMatcher(AbstractPatternMatcher):
 
     def _parse_event(self):
         division_type = self._event.raw_api_response_data['sb']['gcp']['gpn'].lower()
+        previous_division_type = self._previous_event.raw_api_response_data['sb']['gcp']['gpn'].lower()
 
         self.current_quarter = None
         self.current_half = None
+        self.phase_changed = division_type != previous_division_type
 
         if division_type.endswith('quarter'):
             self.phase_type = PhaseType.QUARTER
@@ -53,7 +57,6 @@ class BasketballMatcher(AbstractPatternMatcher):
             self.current_half = 1 if self.current_quarter <= 2 else 2
         elif division_type.endswith('half'):
             self.phase_type = PhaseType.HALF
-            self.current_quarter = None
             self.current_half = int(division_type[0])
         elif division_type == 'overtime':
             self.phase_type = PhaseType.OVERTIME
@@ -71,6 +74,11 @@ class BasketballMatcher(AbstractPatternMatcher):
             self.current_leader = None
 
         current_phase_id = self._event.raw_api_response_data['sb']['gcp']['gpi']
+        if self.phase_type is PhaseType.QUARTER and not (4 >= current_phase_id >= 1):
+            raise ValueError(f'Wrong phase id for phase type: QUARTER: {current_phase_id}')
+        elif self.phase_type is PhaseType.HALF and not (29 >= current_phase_id >= 28):
+            raise ValueError(f'Wrong phase id for phase type: HALF: {current_phase_id}')
+
         current_phase_team_details = [
             x for x in self._event.raw_api_response_data['sb']['gsl']
             if x['gpi'] == current_phase_id
@@ -82,14 +90,41 @@ class BasketballMatcher(AbstractPatternMatcher):
             else:
                 self.second_team.current_phase_points = int(x['v'])
 
-        dup = 1
+        if self.phase_changed:
+            previous_phase_id = self._previous_event.raw_api_response_data['sb']['gcp']['gpi']
+            previous_phase_team_details = [
+                x for x in self._previous_event.raw_api_response_data['sb']['gsl']
+                if x['gpi'] == previous_phase_id
+            ]
+
+            for x in previous_phase_team_details:
+                if x['spi'] == self.first_team.id:
+                    self.first_team.previous_phase_points = int(x['v'])
+                else:
+                    self.second_team.previous_phase_points = int(x['v'])
+
+            self.previous_phase_total_points = self.first_team.previous_phase_points + self.second_team.previous_phase_points
+
+        self.current_phase_total_points = self.first_team.current_phase_points + self.second_team.current_phase_points
+        self.total_game_points = self.first_team.total_points + self.second_team.total_points
 
     def to_dict(self) -> dict:
-        pass
+        return {
+            'home': self.first_team.to_dict(),
+            'away': self.second_team.to_dict(),
+            'current_quarter': self.current_quarter,
+            'current_half': self.current_half,
+            'phase_changed': self.phase_changed,
+            'current_phase_total_points': self.current_phase_total_points,
+            'previous_phase_total_points': self.previous_phase_total_points,
+            'total_game_points': self.total_game_points
+        }
 
     def check_for_matches(self) -> List[Tip]:
         selection_ids = [
-            self._check_race_to_points()
+            self._check_race_to_points(),
+            self._check_phase_points(PhaseType.QUARTER),
+            self._check_phase_points(PhaseType.HALF)
         ]
 
         return [x for x in selection_ids if x is not None]
@@ -123,3 +158,75 @@ class BasketballMatcher(AbstractPatternMatcher):
                 team = 'Away'
 
             return next((t for t in min_goal_group if t.tip.name == team), None)
+
+    def _check_phase_points(self, half_or_quarter: PhaseType) -> Optional[Tip]:
+        assert half_or_quarter != PhaseType.OVERTIME
+
+        if not self.phase_changed:
+            return
+
+        if half_or_quarter is PhaseType.QUARTER and self.phase_type is PhaseType.HALF:
+            return
+
+        if half_or_quarter is PhaseType.QUARTER:
+            if self.current_quarter == 1:
+                return
+
+            market_ids = {
+                2: 149,
+                3: 150,
+                4: 151
+            }
+
+            bet_ids = {
+                2: (1906, 6662),
+                3: (1907, 6663),
+                4: (1908, 6664)
+            }
+
+            if self.phase_type is PhaseType.OVERTIME:
+                m_id = market_ids[4]
+                b_ids = bet_ids[4]
+            else:
+                m_id = market_ids[self.current_quarter - 1]
+                b_ids = bet_ids[self.current_quarter - 1]
+        else:
+            if self.current_half == 1:
+                return
+
+            market_ids = {
+                1: 152,
+                2: 153
+            }
+
+            bet_ids = {
+                1: (1909, 6659),
+                2: (1910, 6660)
+            }
+
+            if self.phase_type is PhaseType.OVERTIME:
+                m_id = market_ids[2]
+                b_ids = bet_ids[2]
+            else:
+                m_id = market_ids[1]
+                b_ids = bet_ids[1]
+
+        tip_groups = self.get_tip_groups(m_id, b_ids[0]) or []
+        tip_groups.extend(self.get_tip_groups(m_id, b_ids[1]) or [])
+        if len(tip_groups) == 0:
+            return
+
+        min_goal_group = min(tip_groups, key=lambda tg: float(tg[0].tip.template_value))
+
+        over_tip = next((t.tip for t in min_goal_group if t.tip.bet_group_name_real.startswith('Over')), None)
+        under_tip = next((t.tip for t in min_goal_group if t.tip.bet_group_name_real.startswith('Under')), None)
+
+        if over_tip is not None:
+            goal = float(over_tip.template_value)
+            if self.previous_phase_total_points > goal:
+                return over_tip
+
+        if under_tip is not None:
+            goal = float(under_tip.template_value)
+            if self.previous_phase_total_points < goal:
+                return under_tip
