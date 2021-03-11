@@ -117,6 +117,11 @@ class Event:
         self.current_phase_bet_names = current_phase_bets
 
     def is_tip_eligible_for_notification(self, tip: Tip) -> bool:
+        if self.sport_id in [1, 58] and \
+                'asian handicap' in tip.bet_group_name_real.lower() and \
+                '.' not in tip.template_value:  # Only non-integral handicap values allowed
+            return False
+
         if self.sport_id not in Event.SPORT_PHASE_NAMES:
             return True
 
@@ -210,6 +215,7 @@ class Tip:
     is_active: bool
     selection_id: str
     associated_player_id: Optional[int]
+    template_value: Optional[str]
 
     BGN_TEMPLATE_REGEX = re.compile('#[^#]+#')
 
@@ -233,6 +239,10 @@ class Tip:
                 bet_group_name = Tip.parse_bet_group_name(market['bgn'])
                 bet_group_name_real = market['mn']
                 is_active = market['ms'] == 10
+                template_value = lv if len(lv := market['lv']) != 0 else None
+
+                if template_value is not None and template_value not in bet_group_name_real:
+                    bet_group_name_real += f' [{template_value}]'
 
                 for tip in market['msl']:
                     tips.append(Tip(
@@ -247,7 +257,8 @@ class Tip:
                         bet_group_name_real=bet_group_name_real,
                         is_active=is_active,
                         selection_id=tip['msit'],
-                        associated_player_id=pid if (pid := tip['pi']) != 0 else None
+                        associated_player_id=pid if (pid := tip['pi']) != 0 else None,
+                        template_value=template_value
                     ))
         except (KeyError, TypeError, ValueError) as e:
             raise InvalidApiResponseError(data, e)
