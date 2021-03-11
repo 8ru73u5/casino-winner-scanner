@@ -4,7 +4,7 @@
   <div class="container is-fluid mb-6">
     <h1 class="title has-text-centered is-2">Bot's bet history</h1>
     {% for history_item in bet_history %}
-      <div class="card mb-4 has-text-white {{ 'has-background-' + ('success' if history_item.success else 'danger') }}"
+      <div class="card mb-4 {{ 'has-background-success has-text-white' if history_item.success else '' }}"
            role="button" style="cursor: pointer;">
         <div class="card-content">
           <div class="content">
