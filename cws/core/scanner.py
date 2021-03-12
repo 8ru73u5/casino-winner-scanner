@@ -82,7 +82,7 @@ class Scanner:
                 if matcher is None:
                     continue
 
-                selections = matcher.check_for_matches()
+                selections = matcher.run_checks()
 
                 for tip in selections:
                     if tip.selection_id in self._placed_bets:

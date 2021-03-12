@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from cws.api.models import Tip, TeamInfo
 from cws.bots.patterns import AbstractPatternMatcher
+from cws.bots.patterns.abstract_pattern_matcher import check
 
 
 @dataclass
@@ -120,16 +121,8 @@ class BasketballMatcher(AbstractPatternMatcher):
             'total_game_points': self.total_game_points
         }
 
-    def check_for_matches(self) -> List[Tip]:
-        selection_ids = [
-            self._check_race_to_points(),
-            self._check_phase_points(PhaseType.QUARTER),
-            self._check_phase_points(PhaseType.HALF)
-        ]
-
-        return [x for x in selection_ids if x is not None]
-
-    def _check_race_to_points(self) -> Optional[Tip]:
+    @check
+    def phase_race_to_points_home_away(self) -> Optional[Tip]:
         if self.phase_type is not PhaseType.QUARTER or self.current_leader is None:
             return
 
@@ -159,7 +152,14 @@ class BasketballMatcher(AbstractPatternMatcher):
 
             return next((t for t in min_goal_group if t.tip.name == team), None)
 
-    def _check_phase_points(self, half_or_quarter: PhaseType) -> Optional[Tip]:
+    @check
+    def phase_total_points_over_under(self) -> List[Tip]:
+        quarter = self._phase_total_points_over_under(PhaseType.QUARTER)
+        half = self._phase_total_points_over_under(PhaseType.HALF)
+
+        return [t for t in (quarter, half) if t is not None]
+
+    def _phase_total_points_over_under(self, half_or_quarter: PhaseType) -> Optional[Tip]:
         assert half_or_quarter != PhaseType.OVERTIME
 
         if not self.phase_changed:
@@ -173,12 +173,14 @@ class BasketballMatcher(AbstractPatternMatcher):
                 return
 
             market_ids = {
+                1: 148,
                 2: 149,
                 3: 150,
                 4: 151
             }
 
             bet_ids = {
+                1: (1905, 6661),
                 2: (1906, 6662),
                 3: (1907, 6663),
                 4: (1908, 6664)

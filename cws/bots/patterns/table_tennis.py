@@ -3,7 +3,7 @@ from math import ceil
 from typing import List, Optional
 
 from cws.api.models import TeamInfo, Tip
-from cws.bots.patterns.abstract_pattern_matcher import AbstractPatternMatcher
+from cws.bots.patterns.abstract_pattern_matcher import AbstractPatternMatcher, check
 
 
 @dataclass
@@ -89,19 +89,8 @@ class TableTennisMatcher(AbstractPatternMatcher):
             'margin_score': self.is_margin_score
         }
 
-    def check_for_matches(self) -> List[Tip]:
-        selection_ids = [
-            self._check_total_set_points(),
-            self._check_total_game_points(),
-            self._check_set_winner(),
-            self._check_total_team_points('home'),
-            self._check_total_team_points('away'),
-            self._check_set_points_winner()
-        ]
-
-        return [x for x in selection_ids if x is not None]
-
-    def _check_total_set_points(self) -> Optional[Tip]:
+    @check
+    def total_set_points_over_under(self) -> Optional[Tip]:
         market_id = 4
         bet_id = 8555
 
@@ -130,7 +119,8 @@ class TableTennisMatcher(AbstractPatternMatcher):
             if not self.is_margin_score and self.min_points_to_win_set == 0 and under_points > self.set_total_points:
                 return under_tip
 
-    def _check_total_game_points(self) -> Optional[Tip]:
+    @check
+    def total_match_points_over_under(self) -> Optional[Tip]:
         market_id = 216
         bet_id = 8438
 
@@ -152,7 +142,8 @@ class TableTennisMatcher(AbstractPatternMatcher):
             if min_points_to_win_match >= remaining_points:
                 return over_tip
 
-    def _check_set_winner(self) -> Optional[Tip]:
+    @check
+    def set_winner_home_away(self) -> Optional[Tip]:
         market_id = 218
         bet_id = 8435
 
@@ -171,7 +162,14 @@ class TableTennisMatcher(AbstractPatternMatcher):
                 if ts.tip.associated_player_id == self.set_leader.id
             ), None)
 
-    def _check_total_team_points(self, home_or_away: str) -> Optional[Tip]:
+    @check
+    def total_match_team_points_over_under(self) -> List[Tip]:
+        home = self._total_match_team_points_over_under('home')
+        away = self._total_match_team_points_over_under('away')
+
+        return [t for t in (home, away) if t is not None]
+
+    def _total_match_team_points_over_under(self, home_or_away: str) -> Optional[Tip]:
         assert home_or_away in ['home', 'away']
 
         market_id = 4
@@ -193,7 +191,8 @@ class TableTennisMatcher(AbstractPatternMatcher):
             if self.min_sets_to_win == 0 and team.total_points >= over_points:
                 return over_tip
 
-    def _check_set_points_winner(self) -> Optional[Tip]:
+    @check
+    def set_point_winner_home_away(self) -> Optional[Tip]:
         market_id = 4
         bet_id = 8556
 
