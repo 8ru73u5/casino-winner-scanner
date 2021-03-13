@@ -150,7 +150,7 @@ class BasketballMatcher(AbstractPatternMatcher):
             else:
                 team = 'Away'
 
-            return next((t for t in min_goal_group if t.tip.name == team), None)
+            return next((t.tip for t in min_goal_group if t.tip.name == team), None)
 
     @check
     def phase_total_points_over_under(self) -> List[Tip]:
@@ -162,16 +162,10 @@ class BasketballMatcher(AbstractPatternMatcher):
     def _phase_total_points_over_under(self, half_or_quarter: PhaseType) -> Optional[Tip]:
         assert half_or_quarter != PhaseType.OVERTIME
 
-        if not self.phase_changed:
-            return
-
         if half_or_quarter is PhaseType.QUARTER and self.phase_type is PhaseType.HALF:
             return
 
         if half_or_quarter is PhaseType.QUARTER:
-            if self.current_quarter == 1:
-                return
-
             market_ids = {
                 1: 148,
                 2: 149,
@@ -186,16 +180,20 @@ class BasketballMatcher(AbstractPatternMatcher):
                 4: (1908, 6664)
             }
 
-            if self.phase_type is PhaseType.OVERTIME:
-                m_id = market_ids[4]
-                b_ids = bet_ids[4]
+            if self.phase_changed:
+                if self.phase_type is PhaseType.OVERTIME:
+                    m_id = market_ids[4]
+                    b_ids = bet_ids[4]
+                else:
+                    m_id = market_ids[self.current_quarter - 1]
+                    b_ids = bet_ids[self.current_quarter - 1]
+            elif self.phase_type is not PhaseType.OVERTIME:
+                m_id = market_ids[self.current_quarter]
+                b_ids = bet_ids[self.current_quarter]
             else:
-                m_id = market_ids[self.current_quarter - 1]
-                b_ids = bet_ids[self.current_quarter - 1]
-        else:
-            if self.current_half == 1:
                 return
 
+        else:
             market_ids = {
                 1: 152,
                 2: 153
@@ -206,12 +204,18 @@ class BasketballMatcher(AbstractPatternMatcher):
                 2: (1910, 6660)
             }
 
-            if self.phase_type is PhaseType.OVERTIME:
-                m_id = market_ids[2]
-                b_ids = bet_ids[2]
+            if self.phase_changed:
+                if self.phase_type is PhaseType.OVERTIME:
+                    m_id = market_ids[2]
+                    b_ids = bet_ids[2]
+                else:
+                    m_id = market_ids[1]
+                    b_ids = bet_ids[1]
+            elif self.phase_type is not PhaseType.OVERTIME:
+                m_id = market_ids[self.current_half]
+                b_ids = bet_ids[self.current_half]
             else:
-                m_id = market_ids[1]
-                b_ids = bet_ids[1]
+                return
 
         tip_groups = self.get_tip_groups(m_id, b_ids[0]) or []
         tip_groups.extend(self.get_tip_groups(m_id, b_ids[1]) or [])
@@ -225,10 +229,87 @@ class BasketballMatcher(AbstractPatternMatcher):
 
         if over_tip is not None:
             goal = float(over_tip.template_value)
-            if self.previous_phase_total_points > goal:
+            if (self.phase_changed and self.previous_phase_total_points > goal) or \
+                    (not self.phase_changed and self.current_phase_total_points > goal):
                 return over_tip
 
-        if under_tip is not None:
+        if under_tip is not None and self.phase_changed:
             goal = float(under_tip.template_value)
             if self.previous_phase_total_points < goal:
                 return under_tip
+
+    @check
+    def phase_point_spread_home_away(self) -> List[Tip]:
+        quarter = self._phase_point_spread_home_away(PhaseType.QUARTER)
+        half = self._phase_point_spread_home_away(PhaseType.HALF)
+
+        return [t for t in (quarter, half) if t is not None]
+
+    def _phase_point_spread_home_away(self, half_or_quarter: PhaseType) -> Optional[Tip]:
+        assert half_or_quarter is not PhaseType.OVERTIME
+
+        if not self.phase_changed:
+            return
+
+        if half_or_quarter is PhaseType.QUARTER and self.phase_type is PhaseType.HALF:
+            return
+
+        if half_or_quarter is PhaseType.QUARTER:
+            market_ids = {
+                1: 148,
+                2: 149,
+                3: 150,
+                4: 151
+            }
+
+            bet_ids = {
+                1: (1901, 6647),
+                2: (1902, 6648),
+                3: (1903, 6649),
+                4: (1904, 6650)
+            }
+
+            if self.phase_type is PhaseType.OVERTIME:
+                m_id = market_ids[4]
+                b_ids = bet_ids[4]
+            else:
+                m_id = market_ids[self.current_quarter - 1]
+                b_ids = bet_ids[self.current_quarter - 1]
+
+        else:
+            if self.phase_type is PhaseType.QUARTER and self.current_quarter != 3:
+                return  # Half hasn't changed - quarter did
+
+            market_ids = {
+                1: 153,
+                2: 154
+            }
+
+            bet_ids = {
+                1: (1898, 6645),
+                2: (1899, 6646)
+            }
+
+            if self.phase_type is PhaseType.OVERTIME:
+                m_id = market_ids[2]
+                b_ids = bet_ids[2]
+            else:
+                m_id = market_ids[1]
+                b_ids = bet_ids[1]
+
+        tip_groups = self.get_tip_groups(m_id, b_ids[0]) or []
+        tip_groups.extend(self.get_tip_groups(m_id, b_ids[1]) or [])
+        if len(tip_groups) != 1:
+            return
+
+        home_handicap, away_handicap = [
+            float(x) for x in tip_groups[0][0].tip.template_value.split(' - ')
+        ]
+
+        if home_handicap > away_handicap and \
+                self.first_team.previous_phase_points + home_handicap > self.second_team.previous_phase_points:
+            handicap_winner = self.first_team
+        else:
+            handicap_winner = self.second_team
+
+        return next((t.tip for t in tip_groups[0] if t.tip.associated_player_id == handicap_winner.id), None)
