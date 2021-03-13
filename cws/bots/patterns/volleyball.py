@@ -273,7 +273,7 @@ class VolleyballMatcher(AbstractPatternMatcher):
         else:
             tip_name = 'Odd'
 
-        return next((t for t in current_set_group if t.tip.name == tip_name), None)
+        return next((t.tip for t in current_set_group if t.tip.name == tip_name), None)
 
     @check
     def total_set_points_handicap_home_away(self) -> Optional[Tip]:
@@ -306,6 +306,6 @@ class VolleyballMatcher(AbstractPatternMatcher):
         if self.is_margin_score or self.min_points_to_win_set == 0 or \
                 handicap_benefactor.set_points + handicap > set_max_score:
             return next(
-                (t for t in tip_groups[0] if t.tip.associated_player_id == handicap_benefactor.id),
+                (t.tip for t in tip_groups[0] if t.tip.associated_player_id == handicap_benefactor.id),
                 None
             )
