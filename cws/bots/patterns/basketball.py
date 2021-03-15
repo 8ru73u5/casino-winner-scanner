@@ -224,8 +224,8 @@ class BasketballMatcher(AbstractPatternMatcher):
 
         min_goal_group = min(tip_groups, key=lambda tg: float(tg[0].tip.template_value))
 
-        over_tip = next((t.tip for t in min_goal_group if t.tip.bet_group_name_real.startswith('Over')), None)
-        under_tip = next((t.tip for t in min_goal_group if t.tip.bet_group_name_real.startswith('Under')), None)
+        over_tip = next((t.tip for t in min_goal_group if t.tip.name.startswith('Over')), None)
+        under_tip = next((t.tip for t in min_goal_group if t.tip.name.startswith('Under')), None)
 
         if over_tip is not None:
             goal = float(over_tip.template_value)
