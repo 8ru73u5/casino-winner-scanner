@@ -200,7 +200,7 @@ class VolleyballMatcher(AbstractPatternMatcher):
         if over_tip is not None:
             over_points = float(over_tip.name.split()[1])
 
-            if self.min_sets_to_win == 0 and team.total_points >= over_points:
+            if team.total_points >= over_points:
                 return over_tip
 
     @check

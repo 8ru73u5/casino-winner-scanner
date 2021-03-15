@@ -216,3 +216,32 @@ class TableTennisMatcher(AbstractPatternMatcher):
             if self.set_total_points == goal:
                 scorer = self.first_player if self.first_player.has_scored_any_points() else self.second_player
                 return next((ts.tip for ts in min_goal_tip_group if ts.tip.associated_player_id == scorer.id), None)
+
+    @check
+    def total_match_player_points_over_under(self) -> List[Tip]:
+        home = self._total_match_player_points_over_under('home')
+        away = self._total_match_player_points_over_under('away')
+
+        return [t for t in (home, away) if t is not None]
+
+    def _total_match_player_points_over_under(self, home_or_away: str) -> Optional[Tip]:
+        assert home_or_away in ['home', 'away']
+
+        market_id = 4
+        bet_id = {
+            'home': 8558,
+            'away': 8559
+        }
+
+        tip_groups = self.get_tip_groups(market_id, bet_id[home_or_away])
+        if tip_groups is None or len(tip_groups) != 1:
+            return
+
+        over_tip = next((t.tip for t in tip_groups[0] if t.tip.bet_group_name_real.startswith('Over')), None)
+
+        if over_tip is not None:
+            goal = float(over_tip.name.split()[1])
+            player = self.first_player if home_or_away == 'home' else self.second_player
+
+            if player.total_points >= goal:
+                return over_tip
