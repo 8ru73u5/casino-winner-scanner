@@ -34,6 +34,7 @@ class Scanner:
     telegram_notification_min_uptime: int
     telegram_second_notification_min_uptime: int
     telegram_notifier: TelegramNotifier
+    _placed_bets: Dict[str, int]
 
     def __init__(self, session: Session):
         self.session = session
@@ -41,7 +42,7 @@ class Scanner:
         self.telegram_notifier = TelegramNotifier()
         self.bot_manager = BotManager(SessionLocal())
         self._bot_manager_update_cycle = cycle(range(10))
-        self._placed_bets = set()
+        self._placed_bets = {}
 
         self._load_enabled_filters()
         self._load_odds_options()
@@ -85,10 +86,12 @@ class Scanner:
                 selections = matcher.run_checks()
 
                 for tip in selections:
-                    if tip.selection_id in self._placed_bets:
+                    self._placed_bets.setdefault(tip.selection_id, 0)
+                    self._placed_bets[tip.selection_id] += 1
+
+                    if self._placed_bets[tip.selection_id] != 2:
                         continue
 
-                    self._placed_bets.add(tip.selection_id)
                     for bot_id, bot in self.bot_manager.bots.items():
                         try:
                             response = bot.place_bet(1, tip.odds, tip.selection_id)
