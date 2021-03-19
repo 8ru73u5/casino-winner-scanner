@@ -89,7 +89,7 @@ class Scanner:
                     self._placed_bets.setdefault(tip.selection_id, 0)
                     self._placed_bets[tip.selection_id] += 1
 
-                    if self._placed_bets[tip.selection_id] != 2:
+                    if self._placed_bets[tip.selection_id] != 4:
                         continue
 
                     for bot_id, bot in self.bot_manager.bots.items():
