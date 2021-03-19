@@ -5,7 +5,6 @@ from telegram import Bot, ParseMode
 from telegram.ext import messagequeue as mq
 
 from cws.api.models import Tip, Event
-from cws.bots.patterns.abstract_pattern_matcher import AbstractPatternMatcher
 from cws.config import AppConfig
 from cws.core.notification import Notification
 
