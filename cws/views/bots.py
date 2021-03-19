@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, current_app, redirect, url_for, flash
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import SQLAlchemyError
 
 from cws.bots.bet_bot import BookmakerType, BetBot, BotInvalidCredentialsError
-from cws.models import BettingBot, BettingBotHistory
+from cws.models import BettingBot, BettingBotHistory, BettingBotCategory
 from cws.views.auth import login_required
 
 bp = Blueprint('bots', __name__, url_prefix='/bots')
@@ -22,9 +22,11 @@ _proxy_countries = {
 def overview():
     db_error = False
     bots = []
+    categories = []
 
     try:
         bots = current_app.session.query(BettingBot).all()
+        categories = current_app.session.query(BettingBotCategory).all()
     except SQLAlchemyError:
         db_error = True
         current_app.session.rollback()
@@ -40,21 +42,36 @@ def overview():
         if wb is not None:
             bot.wallet_balance = wb
 
-    return render_template('bots/overview.html', bots=bots, proxies=_proxy_countries)
+    return render_template('bots/overview.html', bots=bots, proxies=_proxy_countries, categories=categories)
 
 
 @bp.route('/add', methods=('GET', 'POST'))
 @login_required
 def add_bot():
     if request.method == 'GET':
-        return render_template('bots/add_bot.html', proxies=_proxy_countries)
+        db_error = False
+        categories = []
+
+        try:
+            categories = current_app.session.query(BettingBotCategory).all()
+        except SQLAlchemyError:
+            db_error = True
+        finally:
+            current_app.session.close()
+
+        if db_error:
+            return '', 500
+        else:
+            return render_template('bots/add_bot.html', proxies=_proxy_countries, categories=categories)
 
     try:
+        bot_name = request.form['bot_name']
+        bot_category = int(request.form['bot_category'])
         username = request.form['username']
         password = request.form['password']
         bookmaker = request.form['bookmaker']
         country_code = request.form['country_code']
-    except KeyError:
+    except (KeyError, ValueError):
         return '', 400
 
     if bookmaker == 'BETSSON':
@@ -66,16 +83,24 @@ def add_bot():
 
     db_error = False
     bot_already_exists_error = False
+    invalid_category_error = False
     bot_invalid_credentials_error = False
 
     try:
-        existing_bot = current_app.session.query(BettingBot).filter(and_(
-            BettingBot.username == username,
-            BettingBot.bookmaker == bookmaker
+        existing_bot = current_app.session.query(BettingBot).filter(or_(
+            and_(
+                BettingBot.username == username,
+                BettingBot.bookmaker == bookmaker
+            ),
+            BettingBot.name == bot_name
         )).first()
+
+        category = current_app.session.query(BettingBotCategory).get(bot_category)
 
         if existing_bot is not None:
             bot_already_exists_error = True
+        elif category is None:
+            invalid_category_error = True
         else:
             try:
                 bot_login = BetBot(username, password, bookmaker, country_code, is_enabled=True)
@@ -85,7 +110,11 @@ def add_bot():
             else:
                 bot_login.logout()
 
-                bot = BettingBot(username=username, password=password, bookmaker=bookmaker, proxy_country_code=country_code)
+                bot = BettingBot(
+                    name=bot_name, category_id=bot_category,
+                    username=username, password=password,
+                    bookmaker=bookmaker, proxy_country_code=country_code
+                )
                 current_app.session.add(bot)
                 current_app.session.commit()
     except SQLAlchemyError:
@@ -97,7 +126,10 @@ def add_bot():
     if db_error:
         return '', 500
     elif bot_already_exists_error:
-        flash(f'Email: {username} already exists for {bookmaker.name} bookmaker')
+        flash(f'Email: {username} already exists for {bookmaker.name} bookmaker or the name: {bot_name} is already taken')
+        return redirect(url_for('bots.add_bot'))
+    elif invalid_category_error:
+        flash('Invalid category ID')
         return redirect(url_for('bots.add_bot'))
     elif bot_invalid_credentials_error:
         flash('Provided credentials are invalid')
@@ -142,8 +174,9 @@ def bot_history(bot_id):
 def manage_bot(bot_id):
     try:
         is_enabled = request.json['is_enabled']
+        category_id = int(request.json['category_id'])
         country_code = request.json['country_code']
-    except KeyError:
+    except (KeyError, ValueError):
         return '', 400
 
     if not isinstance(is_enabled, bool):
@@ -151,14 +184,19 @@ def manage_bot(bot_id):
 
     db_error = False
     not_found_error = False
+    invalid_category_error = False
 
     try:
         bot = current_app.session.query(BettingBot).get(bot_id)
+        category = current_app.session.query(BettingBotCategory).get(category_id)
 
         if bot is None:
             not_found_error = True
+        elif category is None:
+            invalid_category_error = True
         else:
             bot.is_enabled = is_enabled
+            bot.category_id = category_id
             bot.proxy_country_code = country_code
             current_app.session.commit()
     except SQLAlchemyError:
@@ -171,6 +209,8 @@ def manage_bot(bot_id):
         return '', 500
     elif not_found_error:
         return '', 404
+    elif invalid_category_error:
+        return '', 400
     else:
         return ''
 

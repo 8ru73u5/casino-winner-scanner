@@ -100,6 +100,13 @@ class Bet(Base):
         return hash((self.id, self.market_id, self.sport_id))
 
 
+class BettingBotCategory(Base):
+    __tablename__ = 'betting_bots_categories'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50), nullable=False)
+
+
 class BettingBot(Base):
     __tablename__ = 'betting_bots'
 
@@ -108,11 +115,15 @@ class BettingBot(Base):
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False, unique=True)
     username = Column(String(50), nullable=False)
     password = Column(String(50), nullable=False)
     bookmaker = Column(sql_Enum(BookmakerType), nullable=False)
     is_enabled = Column(Boolean, nullable=False, default=True)
     proxy_country_code = Column(String(5), nullable=False, default='US')
+
+    category_id = Column(Integer, ForeignKey('betting_bots_categories.id'), nullable=False)
+    category = relationship('BettingBotCategory', lazy=False)
 
 
 class BettingBotHistory(Base):

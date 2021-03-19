@@ -5,6 +5,13 @@
     <h1 class="title is-2 has-text-centered">Bot overview</h1>
     {% for bot in bots %}
       <div class="card mb-4 pt-2" data-id="{{ bot.id }}">
+        <div class="p-1" style="position: absolute; top: 0; left: 0;">
+          <span class="icon is-medium p-1">
+            <img src="{{ url_for('static', filename='img/' + bot.bookmaker.name + '_icon.ico') }}"
+                 alt="{{ bot.bookmaker.name }}" title="{{ bot.bookmaker.name }}">
+          </span>
+        </div>
+
         <div class="p-1" style="position: absolute; top: 0; right: 0;">
           <a href="{{ url_for('bots.bot_history', bot_id=bot.id) }}" target="_blank" class="bet-history-link">
             <span class="icon is-medium p-1 has-text-info" title="Go to bet history">
@@ -16,18 +23,25 @@
             <i class="fas fa-trash-alt"></i>
           </span>
         </div>
+
         <div class="card-content">
           <div class="content">
             <div class="columns">
               <div class="column is-flex is-align-items-center">
-                <strong class="mr-2">Username:</strong> {{ bot.username }}
+                <strong class="mr-2">Name:</strong> {{ bot.name }}
               </div>
               <div class="column is-flex is-align-items-center">
-                <strong class="mr-2">Bookmaker:</strong>
-                <span class="icon is-small">
-                  <img src="{{ url_for('static', filename='img/' + bot.bookmaker.name + '_icon.ico') }}"
-                       alt="{{ bot.bookmaker.name }}" title="{{ bot.bookmaker.name }}">
-                </span>
+                <strong class="mr-2">Category:</strong>
+                <div class="select">
+                  <select name="category" aria-label="Category">
+                    {% for category in categories %}
+                      <option value="{{ category.id }}"
+                          {{ 'selected' if bot.category_id == category.id else '' }}>
+                        {{ category.name }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
               </div>
               <div class="column is-flex is-align-items-center">
                 <strong class="mr-2">Balance:</strong> {{ bot.wallet_balance }}
@@ -35,7 +49,7 @@
               <div class="column is-flex is-align-items-center">
                 <strong class="mr-2">Proxy country:</strong>
                 <div class="select">
-                  <select aria-label="Proxy country">
+                  <select name="proxy" aria-label="Proxy country">
                     {% for country_code, country_name in proxies.items() %}
                       <option value="{{ country_code }}"
                           {{ 'selected' if bot.proxy_country_code == country_code else '' }}>
@@ -68,11 +82,14 @@
 
               const botId = parent.dataset.id;
               const isEnabled = parent.querySelector('input[type=checkbox]').checked;
-              const countryCode = Array.from(parent.querySelectorAll('option'))
+              const categoryId = Array.from(parent.querySelectorAll('select[name=category] option'))
+                  .find(opt => opt.selected).value;
+              const countryCode = Array.from(parent.querySelectorAll('select[name=proxy] option'))
                   .find(opt => opt.selected).value;
 
               axios.patch('/bots/bot/' + botId, {
                   is_enabled: isEnabled,
+                  category_id: categoryId,
                   country_code: countryCode
               }).error(e => console.error('While patching bot:', e));
           });
