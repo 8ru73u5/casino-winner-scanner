@@ -105,6 +105,8 @@ class BasketballMatcher(AbstractPatternMatcher):
                     self.second_team.previous_phase_points = int(x['v'])
 
             self.previous_phase_total_points = self.first_team.previous_phase_points + self.second_team.previous_phase_points
+        else:
+            self.previous_phase_total_points = None
 
         self.current_phase_total_points = self.first_team.current_phase_points + self.second_team.current_phase_points
         self.total_game_points = self.first_team.total_points + self.second_team.total_points
