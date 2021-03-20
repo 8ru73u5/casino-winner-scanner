@@ -104,7 +104,7 @@ class BettingBotCategory(Base):
     __tablename__ = 'betting_bots_categories'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(50), nullable=False)
+    name = Column(String(50), nullable=False, unique=True)
 
 
 class BettingBot(Base):
@@ -122,7 +122,7 @@ class BettingBot(Base):
     is_enabled = Column(Boolean, nullable=False, default=True)
     proxy_country_code = Column(String(5), nullable=False, default='US')
 
-    category_id = Column(Integer, ForeignKey('betting_bots_categories.id'), nullable=False)
+    category_id = Column(Integer, ForeignKey('betting_bots_categories.id', ondelete='set null'), nullable=True, default=None)
     category = relationship('BettingBotCategory', lazy=False)
 
 
