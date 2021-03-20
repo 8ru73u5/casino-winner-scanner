@@ -34,6 +34,7 @@
                 <strong class="mr-2">Category:</strong>
                 <div class="select">
                   <select name="category" aria-label="Category">
+                    <option value="">Uncategorized</option>
                     {% for category in categories %}
                       <option value="{{ category.id }}"
                           {{ 'selected' if bot.category_id == category.id else '' }}>

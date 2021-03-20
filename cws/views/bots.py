@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, current_app, redirect, url_for, flash
-from sqlalchemy import and_, or_
+from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
 from cws.bots.bet_bot import BookmakerType, BetBot, BotInvalidCredentialsError
@@ -66,7 +66,7 @@ def add_bot():
 
     try:
         bot_name = request.form['bot_name']
-        bot_category = int(request.form['bot_category'])
+        bot_category_id = int(category) if (category := request.form['bot_category']) != '' else None
         username = request.form['username']
         password = request.form['password']
         bookmaker = request.form['bookmaker']
@@ -83,23 +83,37 @@ def add_bot():
 
     db_error = False
     bot_already_exists_error = False
+    bot_name_already_exists_error = False
     invalid_category_error = False
     bot_invalid_credentials_error = False
 
     try:
-        existing_bot = current_app.session.query(BettingBot).filter(or_(
-            and_(
-                BettingBot.username == username,
-                BettingBot.bookmaker == bookmaker
-            ),
+        existing_bot_query = current_app.session.query(BettingBot).filter(and_(
+            BettingBot.username == username,
+            BettingBot.bookmaker == bookmaker
+        ))
+
+        existing_name_query = current_app.session.query(BettingBot).filter(
             BettingBot.name == bot_name
-        )).first()
+        )
 
-        category = current_app.session.query(BettingBotCategory).get(bot_category)
+        category_query = current_app.session.query(BettingBotCategory).filter(
+            BettingBotCategory.id == bot_category_id
+        )
 
-        if existing_bot is not None:
+        bot_exists = current_app.session.query(existing_bot_query.exists()).scalar()
+        bot_name_exists = current_app.session.query(existing_name_query.exists()).scalar()
+
+        if bot_category_id is not None:
+            category_exists = current_app.session.query(category_query.exists()).scalar()
+        else:
+            category_exists = True
+
+        if bot_exists:
             bot_already_exists_error = True
-        elif category is None:
+        elif bot_name_exists:
+            bot_name_already_exists_error = True
+        elif not category_exists:
             invalid_category_error = True
         else:
             try:
@@ -111,7 +125,7 @@ def add_bot():
                 bot_login.logout()
 
                 bot = BettingBot(
-                    name=bot_name, category_id=bot_category,
+                    name=bot_name, category_id=bot_category_id,
                     username=username, password=password,
                     bookmaker=bookmaker, proxy_country_code=country_code
                 )
@@ -126,16 +140,17 @@ def add_bot():
     if db_error:
         return '', 500
     elif bot_already_exists_error:
-        flash(f'Email: {username} already exists for {bookmaker.name} bookmaker or the name: {bot_name} is already taken')
-        return redirect(url_for('bots.add_bot'))
+        flash(f'Email: {username} already exists for {bookmaker.name} bookmaker', 'bot--credentials')
+    elif bot_name_already_exists_error:
+        flash(f'Name: {bot_name} is already taken', 'bot--name')
     elif invalid_category_error:
-        flash('Invalid category ID')
-        return redirect(url_for('bots.add_bot'))
+        return '', 400
     elif bot_invalid_credentials_error:
-        flash('Provided credentials are invalid')
-        return redirect(url_for('bots.add_bot'))
+        flash('Provided credentials are invalid', 'bot--credentials')
     else:
         return redirect(url_for('bots.overview'))
+
+    return redirect(url_for('bots.add_bot'))
 
 
 @bp.route('/bot/<int:bot_id>')
@@ -174,7 +189,7 @@ def bot_history(bot_id):
 def manage_bot(bot_id):
     try:
         is_enabled = request.json['is_enabled']
-        category_id = int(request.json['category_id'])
+        category_id = int(category) if (category := request.json['category_id']) != '' else None
         country_code = request.json['country_code']
     except (KeyError, ValueError):
         return '', 400
@@ -192,7 +207,7 @@ def manage_bot(bot_id):
 
         if bot is None:
             not_found_error = True
-        elif category is None:
+        elif category is None and category_id is not None:
             invalid_category_error = True
         else:
             bot.is_enabled = is_enabled
@@ -241,3 +256,114 @@ def delete_bot(bot_id):
         return '', 404
     else:
         return ''
+
+
+@bp.route('/add_category', methods=('POST',))
+@login_required
+def add_category():
+    try:
+        category_name = request.form['category_name']
+    except KeyError:
+        return '', 400
+
+    db_error = False
+    category_exists = False
+
+    try:
+        existing_category = current_app.session.query(BettingBotCategory).filter(
+            BettingBotCategory.name == category_name
+        ).first()
+
+        if existing_category is not None:
+            category_exists = True
+        else:
+            current_app.session.add(BettingBotCategory(name=category_name))
+            current_app.session.commit()
+    except SQLAlchemyError:
+        db_error = True
+        current_app.session.rollback()
+    finally:
+        current_app.session.close()
+
+    if db_error:
+        return '', 500
+    elif category_exists:
+        flash(f'Category name: {category_name} is already taken', 'category_add--name')
+
+    return redirect(url_for('bots.add_bot'))
+
+
+@bp.route('/modify_category', methods=('POST',))
+@login_required
+def modify_category():
+    try:
+        category_id = int(request.form['category_id'])
+        category_name = request.form['category_name']
+    except (KeyError, ValueError):
+        return '', 400
+
+    db_error = False
+    invalid_category_error = False
+    name_already_taken_error = False
+
+    try:
+        existing_category = current_app.session.query(BettingBotCategory).get(category_id)
+
+        category_with_the_same_name = current_app.session.query(BettingBotCategory).filter(
+            BettingBotCategory.name == category_name
+        ).first()
+
+        if existing_category is None:
+            invalid_category_error = True
+        elif category_with_the_same_name is not None:
+            name_already_taken_error = True
+        else:
+            existing_category.name = category_name
+            current_app.session.commit()
+    except SQLAlchemyError:
+        db_error = True
+        current_app.session.rollback()
+    finally:
+        current_app.session.close()
+
+    if db_error:
+        return '', 500
+    elif invalid_category_error:
+        return '', 400
+    elif name_already_taken_error:
+        flash(f'Category {category_name} is already taken', 'category_mod--name')
+
+    return redirect(url_for('bots.add_bot'))
+
+
+@bp.route('/delete_category', methods=('POST',))
+@login_required
+def delete_category():
+    try:
+        category_id = int(request.form['category_id'])
+    except (KeyError, ValueError):
+        return '', 400
+
+    db_error = False
+    category_not_found_error = False
+
+    try:
+        category_to_remove = current_app.session.query(BettingBotCategory).get(category_id)
+
+        if category_to_remove is None:
+            category_not_found_error = True
+        else:
+            current_app.session.delete(category_to_remove)
+            current_app.session.commit()
+    except SQLAlchemyError:
+        db_error = True
+        current_app.session.rollback()
+    finally:
+        current_app.session.close()
+
+    if db_error:
+        return '', 500
+    elif category_not_found_error:
+        return '', 404
+    else:
+        return redirect(url_for('bots.add_bot'))
