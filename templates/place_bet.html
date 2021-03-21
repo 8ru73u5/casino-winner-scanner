@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <div class="container is-fluid mb-6">
+    <div class="columns is-justify-content-center">
+      <div class="column is-narrow">
+        <h3 class="title is-3">Bot list</h3>
+        <ul id="bot-category-list">
+          {% for category_name, bot_list in bots.items() %}
+            <li>
+              <label class="checkbox">
+                <input class="category-item" type="checkbox">
+                {{ category_name }}
+              </label>
+              <ul style="margin-left: 1em;">
+                {% for bot in bot_list %}
+                  <li>
+                    <label class="checkbox">
+                      <input class="bot-item" type="checkbox" value="{{ bot.id }}">
+                      {{ bot.name }}
+                    </label>
+                  </li>
+                {% endfor %}
+              </ul>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="column is-narrow">
+        <h3 class="title is-3">Bet details</h3>
+
+        <div class="columns">
+          <div class="column is-half">
+            <div class="control">
+              <label class="radio">
+                <input type="radio" name="details-provider" value="auto" checked>
+                <strong>Auto</strong>
+              </label>
+            </div>
+            <hr>
+
+            <div>
+              <p class="mb-3">
+                <strong>Event:</strong> <span id="auto-event-name"></span>
+              </p>
+              <p class="mb-3">
+                <strong>Bet:</strong> <span id="auto-bet-name"></span>
+              </p>
+              <p class="mb-3">
+                <strong>Tip:</strong> <span id="auto-tip-name"></span>
+              </p>
+              <p class="mb-3">
+                <strong>Odds:</strong> <span id="auto-odds"></span>
+              </p>
+              <fieldset>
+                <button class="button is-info is-fullwidth" onclick="updateBetSummary();">Refresh</button>
+              </fieldset>
+            </div>
+          </div>
+
+          <div class="column is-half">
+            <div class="control">
+              <label class="radio">
+                <input type="radio" name="details-provider" value="manual">
+                <strong>Manual</strong>
+              </label>
+            </div>
+            <hr>
+
+            <fieldset disabled>
+              <div class="field">
+                <label for="manual-selection-id" class="label">
+                  Selection ID
+                </label>
+                <div class="control">
+                  <input id="manual-selection-id" type="text">
+                </div>
+              </div>
+              <div class="field">
+                <label for="manual-odds" class="label">
+                  Odds
+                </label>
+                <div class="control">
+                  <input id="manual-odds" type="number" min="1.0" step="0.05">
+                </div>
+              </div>
+            </fieldset>
+          </div>
+        </div>
+
+        <hr>
+
+        <div class="field">
+          <label class="label">
+            Stake
+            <input id="stake" class="ml-2" type="number" min="0.1" step="0.05" value="5.0">
+          </label>
+        </div>
+
+        <button class="button is-primary" onclick="placeBet();">
+          Place bet
+        </button>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+  <script src="{{ url_for('static', filename='js/placeBet.js') }}"></script>
+  <script>
+      document.querySelectorAll('input.category-item').forEach(checkbox => {
+          checkbox.checked = false;
+
+          checkbox.addEventListener('change', e => {
+              e.preventDefault();
+
+              checkbox.closest('li').querySelectorAll('input.bot-item').forEach(botItem => {
+                  botItem.checked = checkbox.checked;
+              });
+          });
+      });
+
+      document.querySelectorAll('input.bot-item').forEach(checkbox => {
+          checkbox.checked = false;
+
+          checkbox.addEventListener('change', e => {
+              e.preventDefault();
+
+              const categoryItem = checkbox.closest('ul').parentElement.querySelector('input.category-item');
+
+              let enabled = 0;
+              let disabled = 0;
+
+              categoryItem.closest('li').querySelectorAll('input.bot-item').forEach(botItem => {
+                  if (botItem.checked) ++enabled;
+                  else ++disabled;
+              });
+
+              if (enabled === 0 || disabled === 0) {
+                  categoryItem.indeterminate = false;
+                  categoryItem.checked = enabled !== 0;
+              } else {
+                  categoryItem.indeterminate = true;
+              }
+          });
+      });
+
+      document.querySelectorAll('input[name="details-provider"]').forEach(radio => {
+          radio.addEventListener('change', disableUnselectedBetDataProvider);
+      });
+
+      updateBetSummary();
+      disableUnselectedBetDataProvider();
+  </script>
+{% endblock %}

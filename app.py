@@ -3,14 +3,15 @@ from flask_apscheduler import APScheduler
 from sqlalchemy.orm import scoped_session
 
 from cws.config import AppConfig
-from cws.core.status_monitor import StatusMonitor
 from cws.core.scanner import Scanner
+from cws.core.status_monitor import StatusMonitor
 from cws.database import SessionLocal
 from cws.redis_manager import RedisManager
 from cws.views.app import bp as app_bp
 from cws.views.auth import bp as auth_bp
-from cws.views.config import bp as config_bp
 from cws.views.bots import bp as bot_bp
+from cws.views.config import bp as config_bp
+from cws.views.place_bet import bp as place_bet_bp
 
 
 def init_app(launch_core: bool = True):
@@ -42,6 +43,7 @@ def init_app(launch_core: bool = True):
     app.register_blueprint(auth_bp)
     app.register_blueprint(config_bp)
     app.register_blueprint(bot_bp)
+    app.register_blueprint(place_bet_bp)
 
     return app
 

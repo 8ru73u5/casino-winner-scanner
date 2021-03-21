@@ -1,9 +1,11 @@
 class NotificationComponent {
     static $hook = document.getElementById('notifications-container');
     static $template = `
-      <a class="notification box" target="_blank">
+      <div class="notification box">
         <div class="n--uptime"></div>
-        <div><h3 class="title"><span class="n--emoji"></span> <span class="n--game"></span></h3></div>
+        <div>
+          <h3 class="title"><span class="n--emoji"></span> <a class="n--game" target="_blank"></a></h3>
+        </div>
         <div class="content">
           <div class="notification-item">
             <div class="title">Time:</div>
@@ -24,7 +26,7 @@ class NotificationComponent {
             </div>
           </div>
         </div>
-      </a>
+      </div>
     `;
 
     static $soundMinUptime = Infinity;
@@ -89,15 +91,40 @@ class NotificationComponent {
     _setNotificationData(data) {
         this.updateNotificationData(data);
 
-        this.root.href = data.link;
+        this.root.querySelector('.n--game').href = data.link;
 
         this.root.querySelector('.n--emoji').innerHTML = data.sport_name;
         this.root.querySelector('.n--game').innerText = `${data.first_team} vs ${data.second_team}`;
         this.root.querySelector('.n--bet').innerText = data.bet_name;
 
-        data.tips.forEach(({name, odds}) => {
+        data.tips.forEach(({name, odds, selection_id}) => {
             const li = document.createElement('li');
             li.innerText = ` ${name} (${odds})`;
+
+            const iconSpan = document.createElement('span');
+
+            iconSpan.classList.add('icon', 'has-text-info');
+            iconSpan.setAttribute('role', 'button');
+            iconSpan.style.setProperty('cursor', 'pointer');
+            iconSpan.addEventListener('click', e => {
+                e.preventDefault();
+
+                saveBetDataToLocalStorage({
+                    eventName: `${data.first_team} vs ${data.second_team}`,
+                    betName: data.bet_name,
+                    tipName: name,
+                    odds: odds,
+                    selectionId: selection_id
+                });
+
+                window.open('/place_bet');
+            });
+
+            const icon = document.createElement('i');
+            icon.classList.add('fas', 'fa-shopping-cart');
+
+            iconSpan.appendChild(icon);
+            li.appendChild(iconSpan);
 
             this.root.querySelector('.n--tips').appendChild(li);
         });

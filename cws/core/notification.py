@@ -44,7 +44,7 @@ class Notification:
             'score': self.event.get_score(),
             'time': self.event.get_time_or_phase(),
             'bet_name': self.tip_group[0].bet_group_name_real,
-            'tips': [{'name': tip.name, 'odds': tip.odds} for tip in self.tip_group],
+            'tips': [{'name': tip.name, 'odds': tip.odds, 'selection_id': tip.selection_id} for tip in self.tip_group],
             'uptime': self.uptime_formatted,
             'uptime_seconds': self.uptime_seconds
         }

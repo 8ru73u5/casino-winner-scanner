@@ -9,6 +9,7 @@
 {% block scripts %}
   {% if g.admin %}
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="{{ url_for('static', filename='js/placeBet.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notificationComponent.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notificationManager.js') }}"></script>
 
