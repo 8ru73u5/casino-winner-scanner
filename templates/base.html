@@ -24,6 +24,9 @@
   <div id="mainNav" class="navbar-menu">
     <div class="navbar-end">
       {% if g.admin %}
+        <a href="{{ url_for('place_bet.main') }}" class="navbar-item">
+          Place bet
+        </a>
         <a href="{{ url_for('bots.add_bot') }}" class="navbar-item">
           Add bot
         </a>
