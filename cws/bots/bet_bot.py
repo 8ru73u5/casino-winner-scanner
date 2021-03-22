@@ -18,7 +18,8 @@ class BookmakerType(Enum):
         'base_headers': {
             'marketCode': 'en',
             'brandId': 'e123be9a-fe1e-49d0-9200-6afcf20649af'
-        }
+        },
+        'auth_cookie_name': 'auth'
     }
     BETSAFE = {
         'url': 'https://www.betsafe.com',
@@ -26,7 +27,8 @@ class BookmakerType(Enum):
         'base_headers': {
             'marketCode': 'en',
             'brandId': '11a81f20-a960-49e4-8748-51f750c1b27c'
-        }
+        },
+        'auth_cookie_name': 'gamewebauth'
     }
 
     @property
@@ -40,6 +42,10 @@ class BookmakerType(Enum):
     @property
     def base_headers(self):
         return self.value['base_headers']
+
+    @property
+    def auth_cookie_name(self):
+        return self.value['auth_cookie_name']
 
 
 class CouponFilterType(Enum):
@@ -178,7 +184,7 @@ class BetBot:
         if self.has_session() and self._sportsbook_token is not None:
             return BotSessionData(
                 session_token=self._session_token,
-                auth_cookie=self._get_session().cookies['auth'],
+                auth_cookie=self._get_session().cookies[self.bookmaker.auth_cookie_name],
                 sportsbook_token=self._sportsbook_token,
                 customer_id=self._customer_id,
                 proxy_url=self._get_session().proxies['https']
