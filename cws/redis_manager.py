@@ -1,10 +1,10 @@
 from datetime import datetime
-from json import dumps
+from json import dumps, loads
 from typing import List, Iterable, Optional, Dict, Union
 
 from redis import Redis
 
-from cws.bots.bet_bot import WalletBalance
+from cws.bots.bet_bot import WalletBalance, BotSessionData
 from cws.bots.bet_history_item import BetHistoryItem
 from cws.config import AppConfig
 from cws.core.notification import Notification
@@ -21,6 +21,7 @@ class RedisManager:
     APP_LAST_ERRORS_KEY = 'cw_last_errors'
     BET_BOT_WALLETS_KEY = 'cw_bet_bots_wallet_balance'
     BET_BOT_HISTORY_KEY = 'cw_bet_bots_bet_history'
+    BET_BOT_SESSION_DATA_KEY = 'cw_bet_bots_session_data'
 
     def __init__(self):
         self.conn = Redis(host=AppConfig.get(AppConfig.Variables.REDIS_HOST), port=AppConfig.get(AppConfig.Variables.REDIS_PORT))
@@ -95,8 +96,18 @@ class RedisManager:
     def get_app_status_heavy_load(self) -> bool:
         return self.conn.get(RedisManager.APP_STATUS_HEAVY_LOAD_KEY) is not None
 
-    def set_bet_bots_wallet_balance(self, wallet_balances: Dict[int, Optional[WalletBalance]]):
-        for bot_id, wallet in wallet_balances.items():
+    def set_bot_session_data(self, bot_id: int, session_data: BotSessionData):
+        self.conn.set(f'{RedisManager.BET_BOT_SESSION_DATA_KEY}:{bot_id}', dumps(session_data.to_dict(), ensure_ascii=False))
+
+    def get_bot_session_data(self, bot_id: int) -> Optional[BotSessionData]:
+        session_data = self.conn.get(f'{RedisManager.BET_BOT_SESSION_DATA_KEY}:{bot_id}')
+        if session_data is not None:
+            return BotSessionData.from_dict(loads(session_data.decode('utf-8')))
+        else:
+            return None
+
+    def set_bet_bots_wallet_balance(self, bot_id: int, wallet: Optional[WalletBalance]):
+        if wallet is not None:
             self.conn.set(f'{RedisManager.BET_BOT_WALLETS_KEY}:{bot_id}', wallet.funds)
 
     def get_bet_bot_wallet_balance(self, bot_id: int) -> Optional[str]:

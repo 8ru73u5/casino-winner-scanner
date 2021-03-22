@@ -69,6 +69,34 @@ class WalletBalance:
         return f'{self.total_amount:.2f} {self.currency}'
 
 
+@dataclass
+class BotSessionData:
+    session_token: str
+    auth_cookie: str
+    sportsbook_token: str
+    customer_id: int
+    proxy_url: str
+
+    @staticmethod
+    def from_dict(data: dict) -> BotSessionData:
+        return BotSessionData(
+            session_token=data['session_token'],
+            auth_cookie=data['auth_cookie'],
+            sportsbook_token=data['sportsbook_token'],
+            customer_id=data['customer_id'],
+            proxy_url=data['proxy_url']
+        )
+
+    def to_dict(self) -> dict:
+        return {
+            'session_token': self.session_token,
+            'auth_cookie': self.auth_cookie,
+            'sportsbook_token': self.sportsbook_token,
+            'customer_id': self.customer_id,
+            'proxy_url': self.proxy_url
+        }
+
+
 def bet_login_required(method):
     def wrapper(bet_bot: BetBot, *args, **kwargs):
         auto_login_performed = False
@@ -146,7 +174,32 @@ class BetBot:
                 self.logout()
                 self.login(get_sportsbook_token=True)
 
-    def login(self, get_sportsbook_token: bool = False):
+    def get_session_data(self) -> Optional[BotSessionData]:
+        if self.has_session() and self._sportsbook_token is not None:
+            return BotSessionData(
+                session_token=self._session_token,
+                auth_cookie=self._get_session().cookies['auth'],
+                sportsbook_token=self._sportsbook_token,
+                customer_id=self._customer_id,
+                proxy_url=self._get_session().proxies['https']
+            )
+        else:
+            return None
+
+    def load_session_data(self, session_data: BotSessionData):
+        self._session_token = session_data.session_token
+        self._sportsbook_token = session_data.sportsbook_token
+        self._customer_id = session_data.customer_id
+
+        if not self.has_session():
+            self._session = Session()
+            self._session.headers.update(self.bookmaker.base_headers)
+
+        self._get_session().proxies['https'] = session_data.proxy_url
+        self._get_session().cookies.set('auth', session_data.auth_cookie)
+        self._get_session().headers['sessiontoken'] = session_data.session_token
+
+    def login(self, get_sportsbook_token: bool = True):
         if self.has_session():
             self._reset_session()
 
@@ -233,9 +286,13 @@ class BetBot:
         return [BetHistoryItem.from_json(bet) for bet in r.json()['data']['coupons']]
 
     @bet_login_required
-    def place_bet(self, stake: float, odds: float, market_selection_id: str) -> Optional[List[dict]]:
-        if stake > self._wallet_balance.total_amount:
-            raise ValueError('Not enough funds!')
+    def place_bet(self, stake: float, odds: float, market_selection_id: str, validate_stake: bool = False) -> Optional[List[dict]]:
+        if validate_stake:
+            if self._wallet_balance is None:
+                self.get_wallet_balance(reload=True)
+
+            if stake > self._wallet_balance.total_amount:
+                raise ValueError('Not enough funds!')
 
         if self._sportsbook_token is None:
             self._get_sportsbook_token()

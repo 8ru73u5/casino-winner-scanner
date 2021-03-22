@@ -41,7 +41,7 @@ class Scanner:
         self.redis_manager = RedisManager()
         self.telegram_notifier = TelegramNotifier()
         self.bot_manager = BotManager(SessionLocal())
-        self._bot_manager_update_cycle = cycle(range(10))
+        self._bot_manager_update_cycle = cycle(range(30))
         self._placed_bets = {}
 
         self._load_enabled_filters()
@@ -58,9 +58,9 @@ class Scanner:
         self._load_enabled_filters()
         self._load_odds_options()
 
+        self.bot_manager.load_bots(log_in_bots=True)
         if next(self._bot_manager_update_cycle) == 0:
-            self.bot_manager.load_bots(log_in_bots=True)
-            self.bot_manager.save_bots_info_to_redis()
+            self.bot_manager.sync_bots_wallet_balance_with_redis()
 
         new_event_snapshots = self._make_snapshots(events, timestamp)
         old_event_snapshots = self.event_snapshots
@@ -128,6 +128,10 @@ class Scanner:
 
             if db_error is not None:
                 raise db_error
+
+            self.bot_manager.sync_bots_bet_history_with_redis()
+
+        self.bot_manager.save_bots_session_data_to_redis()
 
         self._generate_notifications()
 

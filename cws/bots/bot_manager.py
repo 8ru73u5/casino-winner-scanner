@@ -20,6 +20,10 @@ class BotManager:
         self.bots = {}
         self.load_bots(log_in_bots=True)
 
+        self.sync_bots_wallet_balance_with_redis()
+        self.sync_bots_bet_history_with_redis()
+        self.save_bots_session_data_to_redis()
+
     def _get_bots_from_db(self) -> List[dbBetBot]:
         db_error = None
 
@@ -104,9 +108,19 @@ class BotManager:
 
         return {bot_id: bet_history for bot_id, bet_history in await asyncio.gather(*futures)}
 
-    def save_bots_info_to_redis(self):
+    def sync_bots_wallet_balance_with_redis(self):
         wallet_balances = asyncio.run(self._get_bots_wallet_balance())
-        # bet_histories = asyncio.run(self._get_bots_bet_history())
 
-        self.redis_manager.set_bet_bots_wallet_balance(wallet_balances)
-        # self.redis_manager.set_bet_bots_bet_history(bet_histories)
+        for bot_id, wallet in wallet_balances.items():
+            self.redis_manager.set_bet_bots_wallet_balance(bot_id, wallet)
+
+    def sync_bots_bet_history_with_redis(self):
+        bet_histories = asyncio.run(self._get_bots_bet_history())
+        self.redis_manager.set_bet_bots_bet_history(bet_histories)
+
+    def save_bots_session_data_to_redis(self):
+        for bot_id, bot in self.bots.items():
+            session_data = bot.get_session_data()
+
+            if session_data is not None:
+                self.redis_manager.set_bot_session_data(bot_id, session_data)
