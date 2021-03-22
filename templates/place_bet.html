@@ -17,7 +17,7 @@
                   <li>
                     <label class="checkbox">
                       <input class="bot-item" type="checkbox" value="{{ bot.id }}">
-                      {{ bot.name }}
+                      {{ bot.name }} ({{ bot.wallet_balance or '???' }})
                     </label>
                   </li>
                 {% endfor %}

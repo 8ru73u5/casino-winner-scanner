@@ -103,9 +103,29 @@ function placeBet() {
         icon: 'warning',
         buttons: ['Cancel', 'Confirm'],
         dangerMode: true
-    }).then(value => {
+    }).then(async value => {
         if (value) {
-            swal('Success!', 'Bet was successfully placed!', 'success');
+            let result;
+
+            try {
+                result = await axios.post('/place_bet/place', {
+                    bot_ids: bots.map(b => b.id),
+                    stake: stake,
+                    selection_id: selectionId,
+                    odds: odds
+                });
+            } catch (e) {
+                swal('Server error', 'There was an error on the server side.\nPlease contact the developer', 'error');
+                return;
+            }
+
+            let summary = 'Results:';
+            result.data.results.forEach(r => {
+                const botName = bots.find(b => b.id === r.id).name;
+                summary += `\n- ${botName}: ${r.result == null ? '🟢 Success' : '🔴 ' + JSON.stringify(r.result)}`;
+            });
+
+            swal('Bet results', summary, 'success');
         }
     });
 }
