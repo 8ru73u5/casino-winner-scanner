@@ -101,7 +101,18 @@ function placeBet() {
         title: 'Bet summary',
         text: `${betDataSummary}\n\nBots:${botSummary}\n\nStake: ${stake}`,
         icon: 'warning',
-        buttons: ['Cancel', 'Confirm'],
+        buttons: [
+            {
+                text: 'Cancel',
+                value: false,
+                closeModal: true
+            },
+            {
+                text: 'Confirm',
+                value: true,
+                closeModal: false
+            }
+        ],
         dangerMode: true
     }).then(async value => {
         if (value) {
