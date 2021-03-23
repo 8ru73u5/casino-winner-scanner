@@ -93,8 +93,10 @@ class Scanner:
                         continue
 
                     for bot_id, bot in self.bot_manager.bots.items():
+                        stake = 50
+
                         try:
-                            response = bot.place_bet(1, tip.odds, tip.selection_id)
+                            response = bot.place_bet(stake, tip.odds, tip.selection_id)
                         except ValueError:
                             pass
                         else:
@@ -105,7 +107,7 @@ class Scanner:
                                 market_name=tip.bet_group_name_real,
                                 selection_name=tip.name,
                                 odds=tip.odds,
-                                stake=1,
+                                stake=stake,
                                 success=response is None,
                                 details=matcher.to_dict(),
                                 bookmaker_response=response,
