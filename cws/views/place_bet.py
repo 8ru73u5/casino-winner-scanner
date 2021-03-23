@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from cws.bots.bet_bot import BetBot, BotInvalidCredentialsError
 from cws.models import BettingBot
 from cws.redis_manager import RedisManager
+from cws.views.auth import login_required
 
 bp = Blueprint('place_bet', __name__, url_prefix='/place_bet')
 
@@ -18,6 +19,7 @@ current_app.redis_manager: RedisManager
 
 
 @bp.route('/')
+@login_required
 def main():
     db_error = False
 
@@ -50,6 +52,7 @@ def main():
 
 
 @bp.route('/place', methods=('POST',))
+@login_required
 def place_bet():
     try:
         bot_ids = [int(bot_id) for bot_id in request.json['bot_ids']]
