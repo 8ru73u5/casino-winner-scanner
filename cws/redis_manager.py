@@ -121,9 +121,9 @@ class RedisManager:
         for bot_id, history in bet_histories.items():
             self.conn.set(f'{RedisManager.BET_BOT_HISTORY_KEY}:{bot_id}', BetHistoryItem.to_json_str_multiple(history))
 
-    def get_bet_bot_bet_history(self, bot_id: int) -> Optional[str]:
+    def get_bet_bot_bet_history(self, bot_id: int) -> Optional[List[dict]]:
         bh = self.conn.get(f'{RedisManager.BET_BOT_HISTORY_KEY}:{bot_id}')
         if bh is not None:
-            return bh.decode('utf-8')
+            return loads(bh.decode('utf-8'))
         else:
             return None

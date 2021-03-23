@@ -184,6 +184,17 @@ def bot_history(bot_id):
         return render_template('bots/history.html', bet_history=history)
 
 
+@bp.route('/bot/<int:bot_id>/bookmaker')
+@login_required
+def bot_bookmaker_history(bot_id):
+    bet_history = current_app.redis_manager.get_bet_bot_bet_history(bot_id)
+
+    if bet_history is None:
+        bet_history = []
+
+    return render_template('bots/bookmaker_history.html', bet_history=bet_history)
+
+
 @bp.route('/bot/<int:bot_id>', methods=('PATCH',))
 @login_required
 def manage_bot(bot_id):

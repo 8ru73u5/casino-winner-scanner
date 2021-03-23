@@ -13,6 +13,11 @@
         </div>
 
         <div class="p-1" style="position: absolute; top: 0; right: 0;">
+          <a href="{{ url_for('bots.bot_bookmaker_history', bot_id=bot.id) }}" target="_blank" class="bookmaker-bet-history-link">
+            <span class="icon is-medium p-1 has-text-info" title="Go to bookmaker bet history">
+              <i class="fas fa-landmark"></i>
+            </span>
+          </a>
           <a href="{{ url_for('bots.bot_history', bot_id=bot.id) }}" target="_blank" class="bet-history-link">
             <span class="icon is-medium p-1 has-text-info" title="Go to bet history">
               <i class="fas fa-chart-bar"></i>
