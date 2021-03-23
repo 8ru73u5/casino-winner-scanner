@@ -18,6 +18,25 @@ function getBetDataFromLocalStorage() {
     }
 }
 
+function handleIndeterminateCheckboxes(checkbox) {
+    const categoryItem = checkbox.closest('ul').parentElement.querySelector('input.category-item');
+
+    let enabled = 0;
+    let disabled = 0;
+
+    categoryItem.closest('li').querySelectorAll('input.bot-item').forEach(botItem => {
+        if (botItem.checked) ++enabled;
+        else ++disabled;
+    });
+
+    if (enabled === 0 || disabled === 0) {
+        categoryItem.indeterminate = false;
+        categoryItem.checked = enabled !== 0;
+    } else {
+        categoryItem.indeterminate = true;
+    }
+}
+
 function updateBetSummary() {
     const betData = getBetDataFromLocalStorage();
     const empty = '―';
@@ -133,7 +152,15 @@ function placeBet() {
             let summary = 'Results:';
             result.data.results.forEach(r => {
                 const botName = bots.find(b => b.id === r.id).name;
-                summary += `\n- ${botName}: ${r.result == null ? '🟢 Success' : '🔴 ' + JSON.stringify(r.result)}`;
+                const success = r.result == null;
+                const reason = success ? '🟢 Success' : '🔴 ' + JSON.stringify(r.result);
+
+                summary += `\n- ${botName}: ${reason}`;
+
+                // Uncheck bots that were successful
+                const targetCheckbox = document.querySelector(`input.bot-item[value="${r.id}"]`);
+                targetCheckbox.checked = !success;
+                handleIndeterminateCheckboxes(targetCheckbox);
             });
 
             swal('Bet results', summary, 'success');
