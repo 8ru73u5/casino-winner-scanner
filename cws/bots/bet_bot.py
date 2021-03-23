@@ -152,6 +152,13 @@ class BetBot:
         if self.has_session():
             self.logout()
 
+    @property
+    def proxy(self) -> Optional[str]:
+        if self.has_session():
+            return self._get_session().proxies['https']
+        else:
+            return None
+
     def has_session(self) -> bool:
         return self._session is not None
 

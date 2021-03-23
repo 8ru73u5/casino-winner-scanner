@@ -1,5 +1,5 @@
 from random import choice
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Set, Iterable
 
 from requests import get
 
@@ -10,6 +10,8 @@ class ProxyManager:
     WEBSHARE_API_TOKEN = None
     WEBSHARE_API_URL = 'https://proxy.webshare.io/api'
 
+    USED_PROXIES = set()
+
     @classmethod
     def _get_token(cls) -> str:
         if cls.WEBSHARE_API_TOKEN is None:
@@ -18,7 +20,7 @@ class ProxyManager:
         return cls.WEBSHARE_API_TOKEN
 
     @classmethod
-    def get_proxy_list(cls, countries: Union[str, List[str]] = None) -> List[Dict[str, str]]:
+    def get_proxy_list(cls, countries: Union[str, List[str]] = None) -> Set[str]:
         if countries is None:
             params = {}
         elif isinstance(countries, list):
@@ -33,24 +35,25 @@ class ProxyManager:
         r = get(cls.WEBSHARE_API_URL + '/proxy/list', headers=headers, params=params)
         r.raise_for_status()
 
-        proxies = []
+        proxies = set()
         for proxy in r.json()['results']:
             username = proxy['username']
             password = proxy['password']
             ip = proxy['proxy_address']
             port = proxy['ports']['http']
 
-            proxies.append({
-                'https': f'http://{username}:{password}@{ip}:{port}'
-            })
+            proxies.add(f'http://{username}:{password}@{ip}:{port}')
 
         return proxies
 
     @classmethod
     def get_random_proxy(cls, countries: Union[str, List[str]] = None) -> Dict[str, str]:
         proxies = cls.get_proxy_list(countries)
+        available_proxies = proxies.difference(cls.USED_PROXIES)
 
-        if len(proxies) == 0:
-            return {}
-        else:
-            return choice(proxies)
+        if len(proxies) == 0 or len(available_proxies) == 0:
+            raise RuntimeError('No available proxies')
+
+        proxy = choice(list(available_proxies))
+
+        return {'https': proxy}
