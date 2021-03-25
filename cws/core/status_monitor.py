@@ -8,9 +8,15 @@ class StatusMonitor:
 
     def __init__(self):
         self.redis_manager = RedisManager()
+        self.heavy_load_hits = 0
 
     def scheduler_monitor(self, event: JobExecutionEvent):
         if event.code == EVENT_JOB_ERROR:
             self.redis_manager.set_app_status_error(type(event.exception).__name__, str(event.exception), event.traceback)
-        elif event.code == EVENT_JOB_MAX_INSTANCES:
-            self.redis_manager.set_app_status_heavy_load()
+
+        if event.code == EVENT_JOB_MAX_INSTANCES:
+            self.heavy_load_hits += 1
+            if self.heavy_load_hits > 2:
+                self.redis_manager.set_app_status_heavy_load()
+        elif self.heavy_load_hits != 0:
+            self.heavy_load_hits -= 1

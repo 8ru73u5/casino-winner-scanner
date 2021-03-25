@@ -91,7 +91,7 @@ class RedisManager:
             return None
 
     def set_app_status_heavy_load(self):
-        self.conn.setex(RedisManager.APP_STATUS_HEAVY_LOAD_KEY, 10, '1')
+        self.conn.setex(RedisManager.APP_STATUS_HEAVY_LOAD_KEY, 5, '1')
 
     def get_app_status_heavy_load(self) -> bool:
         return self.conn.get(RedisManager.APP_STATUS_HEAVY_LOAD_KEY) is not None
