@@ -1,10 +1,12 @@
+import asyncio
 from collections import OrderedDict
 
 from flask import Blueprint, render_template, current_app, request
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from cws.bots.bet_bot import BetBot, BotInvalidCredentialsError
+from cws.bots.bet_bot import BetBot, BotInvalidCredentialsError, BetPlacementDetails, place_multiple_bets
+from cws.bots.bot_manager import BotManager
 from cws.models import BettingBot
 from cws.redis_manager import RedisManager
 from cws.views.auth import login_required
@@ -80,6 +82,8 @@ def place_bet():
     # Construct bots and load session data
     results = []
     bots = {}
+    logged_bots = []
+
     for bot_data in bots_db:
         bot_data: BettingBot
 
@@ -91,6 +95,7 @@ def place_bet():
         if session_data is None:
             try:
                 bot.login(get_sportsbook_token=True)
+                logged_bots.append(bot)
             except BotInvalidCredentialsError:
                 results.append({'id': bot_data.id, 'result': 'Incorrect credentials'})
             except Exception as e:
@@ -102,23 +107,33 @@ def place_bet():
             bots[bot_data.id] = bot
 
     # Place bets and get results
-    for bot_id, bot in bots.items():
-        try:
-            result = bot.place_bet(stake, odds, selection_id)
-        except Exception as e:
-            result = str(e)
+    bet_placement_details = []
 
-        results.append({
+    for bot_id, bot in bots.items():
+        bet_placement_details.append(BetPlacementDetails(
+            bot_id=bot_id,
+            bot=bot,
+            stake=stake,
+            odds=odds,
+            market_selection_id=selection_id
+        ))
+
+    results.extend([
+        {
             'id': bot_id,
-            'result': result
-        })
+            'result': result if not isinstance(result, Exception) else str(result)
+        }
+        for bot_id, result in asyncio.run(place_multiple_bets(bet_placement_details)).items()
+    ])
 
-    for bot_id, bot in bots.items():
-        # noinspection PyBroadException
-        try:
-            wallet = bot.get_wallet_balance(reload=True)
-            current_app.redis_manager.set_bet_bots_wallet_balance(bot_id, wallet)
-        except:
-            pass
+    # noinspection PyTypeChecker
+    bot_manager = BotManager(None)
+    bot_manager.bots = bots
+
+    bot_manager.sync_bots_wallet_balance_with_redis()
+    bot_manager.sync_bots_bet_history_with_redis()
+
+    for bot in logged_bots:
+        bot.logout()
 
     return {'results': results}

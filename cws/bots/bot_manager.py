@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 
 from cws.bots.bet_bot import BetBot, WalletBalance
 from cws.bots.bet_history_item import BetHistoryItem
-from cws.bots.proxy_manager import ProxyManager
 from cws.models import BettingBot as dbBetBot
 from cws.redis_manager import RedisManager
 
@@ -17,13 +16,7 @@ class BotManager:
     def __init__(self, session: Session):
         self.session = session
         self.redis_manager = RedisManager()
-
         self.bots = {}
-        self.load_bots(log_in_bots=True)
-
-        self.sync_bots_wallet_balance_with_redis()
-        self.sync_bots_bet_history_with_redis()
-        self.save_bots_session_data_to_redis()
 
     def _get_bots_from_db(self) -> List[dbBetBot]:
         db_error = None
@@ -60,8 +53,6 @@ class BotManager:
 
         if log_in_bots:
             asyncio.run(self._log_in_bots())
-
-        ProxyManager.USED_PROXIES = {proxy for b in self.bots.values() if (proxy := b.proxy) is not None}
 
     async def _log_in_bots(self):
         logged_off_bots = [bot for bot in self.bots.values() if not bot.has_session()]

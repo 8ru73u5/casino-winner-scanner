@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from enum import Enum
 from json.decoder import JSONDecodeError
-from typing import List, Optional
+from typing import List, Optional, Tuple, Union
 
 from requests import Session, HTTPError
+from requests.exceptions import ProxyError
 
 from cws.bots.bet_history_item import BetHistoryItem
 from cws.bots.proxy_manager import ProxyManager
@@ -103,6 +105,32 @@ class BotSessionData:
         }
 
 
+@dataclass
+class BetPlacementDetails:
+    bot_id: int
+    bot: BetBot
+    stake: float
+    odds: float
+    market_selection_id: str
+    validate_stake: bool = False
+
+    def place_bet(self) -> Tuple[int, Union[Optional[List[dict]], Exception]]:
+        try:
+            return self.bot_id, self.bot.place_bet(self.stake, self.odds, self.market_selection_id, self.validate_stake)
+        except Exception as e:
+            return self.bot_id, e
+
+
+async def place_multiple_bets(placement_details: List[BetPlacementDetails]):
+    loop = asyncio.get_event_loop()
+    futures = [
+        loop.run_in_executor(None, BetPlacementDetails.place_bet, pd)
+        for pd in placement_details
+    ]
+
+    return {bot_id: result for bot_id, result in await asyncio.gather(*futures)}
+
+
 def bet_login_required(method):
     def wrapper(bet_bot: BetBot, *args, **kwargs):
         auto_login_performed = False
@@ -120,6 +148,9 @@ def bet_login_required(method):
                 return method(bet_bot, *args, **kwargs)
             else:
                 raise
+        except ProxyError:
+            bet_bot.get_new_random_proxy()
+            return method(bet_bot, *args, **kwargs)
 
     return wrapper
 
@@ -147,10 +178,6 @@ class BetBot:
             self.login()
             self.get_wallet_balance(reload=True)
             self._get_sportsbook_token()
-
-    def __del__(self):
-        if self.has_session():
-            self.logout()
 
     @property
     def proxy(self) -> Optional[str]:
@@ -187,6 +214,11 @@ class BetBot:
                 self.logout()
                 self.login(get_sportsbook_token=True)
 
+    def get_new_random_proxy(self):
+        if self.has_session():
+            ProxyManager.remove_proxy_from_used_proxy_list(self.proxy)
+            self._session.proxies = ProxyManager.get_random_proxy(self._proxy_country_code)
+
     def get_session_data(self) -> Optional[BotSessionData]:
         if self.has_session() and self._sportsbook_token is not None:
             return BotSessionData(
@@ -194,7 +226,7 @@ class BetBot:
                 auth_cookie=self._get_session().cookies[self.bookmaker.auth_cookie_name],
                 sportsbook_token=self._sportsbook_token,
                 customer_id=self._customer_id,
-                proxy_url=self._get_session().proxies['https']
+                proxy_url=self.proxy
             )
         else:
             return None
@@ -222,19 +254,25 @@ class BetBot:
         }
 
         print('Logging in...', end=' ')
-        r = self._get_session().post(self.bookmaker.url + '/api/v1/single-sign-on-sessions', json=data)
+        for _ in range(3):
+            try:
+                r = self._get_session().post(self.bookmaker.url + '/api/v1/single-sign-on-sessions', json=data)
+                r.raise_for_status()
+                break
+            except HTTPError as e:
+                if e.response.status_code == 400:
+                    try:
+                        if e.response.json()['code'] == 'E_SESSIONS_LOGIN_INVALIDCREDENTIALS':
+                            raise BotInvalidCredentialsError()
+                    except (JSONDecodeError, KeyError):
+                        pass
 
-        try:
-            r.raise_for_status()
-        except HTTPError as e:
-            if e.response.status_code == 400:
-                try:
-                    if e.response.json()['code'] == 'E_SESSIONS_LOGIN_INVALIDCREDENTIALS':
-                        raise BotInvalidCredentialsError()
-                except (JSONDecodeError, KeyError):
-                    pass
-
-            raise
+                raise
+            except ProxyError:
+                print('Proxy error! Retrying login with new proxy')
+                self.get_new_random_proxy()
+        else:
+            raise RuntimeError(f'Too many login retries for {self._username}')
 
         print('done!')
 
@@ -255,6 +293,7 @@ class BetBot:
         r.raise_for_status()
         print('done!')
 
+        ProxyManager.remove_proxy_from_used_proxy_list(self.proxy)
         self._reset_session()
 
     @bet_login_required

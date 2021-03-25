@@ -1,5 +1,6 @@
 from random import choice
-from typing import Union, List, Dict, Set, Iterable
+from threading import Lock
+from typing import Union, List, Dict, Set
 
 from requests import get
 
@@ -11,6 +12,7 @@ class ProxyManager:
     WEBSHARE_API_URL = 'https://proxy.webshare.io/api'
 
     USED_PROXIES = set()
+    USED_PROXIES_LOCK = Lock()
 
     @classmethod
     def _get_token(cls) -> str:
@@ -49,11 +51,19 @@ class ProxyManager:
     @classmethod
     def get_random_proxy(cls, countries: Union[str, List[str]] = None) -> Dict[str, str]:
         proxies = cls.get_proxy_list(countries)
-        available_proxies = proxies.difference(cls.USED_PROXIES)
 
-        if len(proxies) == 0 or len(available_proxies) == 0:
-            raise RuntimeError('No available proxies')
+        with cls.USED_PROXIES_LOCK:
+            available_proxies = proxies.difference(cls.USED_PROXIES)
 
-        proxy = choice(list(available_proxies))
+            if len(proxies) == 0 or len(available_proxies) == 0:
+                raise RuntimeError('No available proxies')
+
+            proxy = choice(list(available_proxies))
+            cls.USED_PROXIES.add(proxy)
 
         return {'https': proxy}
+
+    @classmethod
+    def remove_proxy_from_used_proxy_list(cls, proxy: str):
+        with cls.USED_PROXIES_LOCK:
+            cls.USED_PROXIES.discard(proxy)
