@@ -87,6 +87,11 @@ class VolleyballMatcher(AbstractPatternMatcher):
             else:
                 self.min_points_to_win_set = 25 - self.set_leader.set_points
 
+        game_ended = max(self.first_team.sets_won, self.second_team.sets_won) >= 3
+        if game_ended:
+            self.min_sets_to_win = 0
+            self.min_points_to_win_set = 0
+
     def to_dict(self) -> dict:
         return {
             'home': self.first_team.to_dict(),
