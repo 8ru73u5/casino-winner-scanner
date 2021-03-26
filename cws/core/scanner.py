@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from itertools import cycle
 from typing import Dict, List
@@ -11,9 +12,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.functions import coalesce
 
 from cws.api.casino_winner import CasinoWinnerApi as Api
-from cws.api.models import Event
+from cws.api.models import Event, Tip
+from cws.bots.bet_bot import BetPlacementDetails, place_multiple_bets
 from cws.bots.bot_manager import BotManager
-from cws.bots.patterns import get_supported_sports, get_matcher
+from cws.bots.patterns import get_supported_sports, get_matcher, AbstractPatternMatcher
 from cws.core.notification import Notification
 from cws.core.notifier import TelegramNotifier
 from cws.core.snapshots import EventSnapshot
@@ -73,78 +75,10 @@ class Scanner:
         new_event_snapshots = self._make_snapshots(events, timestamp)
         old_event_snapshots = self.event_snapshots
         self._update_snapshots(new_event_snapshots)
-
-        supported_sports = get_supported_sports()
-        snapshots = [s for s in new_event_snapshots.values() if s.event.sport_id in supported_sports]
-        betting_history = []
-
-        for new_snapshot in snapshots:
-            old_snapshot = old_event_snapshots.get(new_snapshot.event.id)
-            if old_snapshot is not None:
-                # noinspection PyBroadException
-                try:
-                    matcher = get_matcher(new_snapshot.event.sport_id, new_snapshot, old_snapshot)
-                except Exception as e:
-                    print('ERROR while creating matcher:', e)
-                    continue
-
-                if matcher is None:
-                    continue
-
-                selections = matcher.run_checks()
-
-                for tip in selections:
-                    self._placed_bets.setdefault(tip.selection_id, 0)
-                    self._placed_bets[tip.selection_id] += 1
-
-                    if self._placed_bets[tip.selection_id] != 4:
-                        continue
-
-                    for bot_id, bot in self.bot_manager.bots.items():
-                        stake = 50
-
-                        try:
-                            response = bot.place_bet(stake, tip.odds, tip.selection_id)
-                        except ValueError:
-                            pass
-                        else:
-                            event = new_snapshot.event
-                            self.telegram_notifier.send_placing_bet_confirmation(event, tip, response)
-                            betting_history.append(BettingBotHistory(
-                                event_name=f'{event.get_sport_name_or_emoji()} {event.first_team.name} vs {event.second_team.name}',
-                                market_name=tip.bet_group_name_real,
-                                selection_name=tip.name,
-                                odds=tip.odds,
-                                stake=stake,
-                                success=response is None,
-                                details=matcher.to_dict(),
-                                bookmaker_response=response,
-                                bot_id=bot_id,
-                                sport_id=event.sport_id
-                            ))
-
-        if len(betting_history) > 0:
-            db_error = None
-
-            try:
-                for bh in betting_history:
-                    self.session.add(bh)
-                self.session.commit()
-            except SQLAlchemyError as e:
-                db_error = e
-                self.session.rollback()
-            finally:
-                self.session.close()
-
-            if db_error is not None:
-                raise db_error
-
-            self.bot_manager.sync_bots_wallet_balance_with_redis()
-            self.bot_manager.sync_bots_bet_history_with_redis()
-
-        self.bot_manager.save_bots_session_data_to_redis()
-
         self._generate_notifications()
+
+        pattern_checks = self._check_for_patterns(new_event_snapshots, old_event_snapshots)
+        self._place_bets_from_pattern_checks(pattern_checks)
 
     def _make_snapshots(self, events: List[Event], timestamp: datetime) -> Dict[int, EventSnapshot]:
         return {event.id: EventSnapshot(event, timestamp, self.enabled_filters) for event in events}
@@ -338,3 +272,97 @@ class Scanner:
                 to_send.append(n)
 
         self.telegram_notifier.send_notifications(to_send)
+
+    def _check_for_patterns(self, new_event_snapshots: Dict[int, EventSnapshot], old_event_snapshots: Dict[int, EventSnapshot]) -> List[dict]:
+        supported_sports = get_supported_sports()
+        snapshots = [s for s in new_event_snapshots.values() if s.event.sport_id in supported_sports]
+        successful_pattern_checks = []
+
+        for new_snapshot in snapshots:
+            old_snapshot = old_event_snapshots.get(new_snapshot.event.id)
+
+            if old_snapshot is not None:
+                try:
+                    matcher = get_matcher(new_snapshot.event.sport_id, new_snapshot, old_snapshot)
+                except Exception as e:
+                    print(f'ERROR while creating matcher: {e}')
+                    continue
+
+                if matcher is None:
+                    continue
+
+                selections = matcher.run_checks()
+
+                for tip in selections:
+                    # Different stake for volleyball due to some problems (for now)
+                    stake = 50 if new_snapshot.event.id != 9 else 5
+
+                    successful_pattern_checks.append({
+                        'event': new_snapshot.event,
+                        'tip': tip,
+                        'stake': stake,
+                        'matcher': matcher
+                    })
+
+        return successful_pattern_checks
+
+    def _place_bets_from_pattern_checks(self, pattern_checks: List[dict]):
+        betting_history = []
+
+        for pattern_check in pattern_checks:
+            event: Event = pattern_check['event']
+            tip: Tip = pattern_check['tip']
+            stake: float = pattern_check['stake']
+            matcher: AbstractPatternMatcher = pattern_check['matcher']
+
+            pattern_hit_count = self._placed_bets.setdefault(tip.selection_id, 0)
+            self._placed_bets[tip.selection_id] += 1
+
+            if pattern_hit_count + 1 == 4:
+                bet_placement_details = [
+                    BetPlacementDetails(
+                        bot_id=bot_id,
+                        bot=bot,
+                        stake=stake,
+                        odds=tip.odds,
+                        market_selection_id=tip.selection_id
+                    )
+                    for bot_id, bot in self.bot_manager.bots.items()
+                ]
+
+                for bot_id, result in asyncio.run(place_multiple_bets(bet_placement_details)).items():
+                    if not isinstance(result, Exception):
+                        self.telegram_notifier.send_placing_bet_confirmation(event, tip, result)
+
+                    betting_history.append(BettingBotHistory(
+                        event_name=f'{event.get_sport_name_or_emoji()} {event.first_team.name} vs {event.second_team.name}',
+                        market_name=tip.bet_group_name_real,
+                        selection_name=tip.name,
+                        odds=tip.odds,
+                        stake=stake,
+                        success=result is None,
+                        details=matcher.to_dict(),
+                        bookmaker_response=result if not isinstance(result, Exception) else {'scanner_error': str(result)},
+                        bot_id=bot_id,
+                        sport_id=event.sport_id
+                    ))
+
+        if len(betting_history) != 0:
+            db_error = None
+
+            try:
+                for bh in betting_history:
+                    self.session.add(bh)
+                self.session.commit()
+            except SQLAlchemyError as e:
+                db_error = e
+                self.session.rollback()
+            finally:
+                self.session.close()
+
+            if db_error is not None:
+                raise db_error
+
+            self.bot_manager.sync_bots_wallet_balance_with_redis()
+            self.bot_manager.sync_bots_bet_history_with_redis()
+            self.bot_manager.save_bots_session_data_to_redis()
