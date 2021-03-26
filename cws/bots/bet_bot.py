@@ -4,7 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from enum import Enum
 from json.decoder import JSONDecodeError
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Dict
 
 from requests import Session, HTTPError
 from requests.exceptions import ProxyError
@@ -121,7 +121,7 @@ class BetPlacementDetails:
             return self.bot_id, e
 
 
-async def place_multiple_bets(placement_details: List[BetPlacementDetails]):
+async def place_multiple_bets(placement_details: List[BetPlacementDetails]) -> Dict[int, Optional[List[dict]]]:
     loop = asyncio.get_event_loop()
     futures = [
         loop.run_in_executor(None, BetPlacementDetails.place_bet, pd)
