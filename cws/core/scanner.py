@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime
 from itertools import cycle
-from typing import Dict, List
+from typing import Dict, List, Set
 
 from sqlalchemy import and_
 from sqlalchemy.dialects.postgresql import insert as psql_insert
@@ -36,7 +36,7 @@ class Scanner:
     telegram_notification_min_uptime: int
     telegram_second_notification_min_uptime: int
     telegram_notifier: TelegramNotifier
-    _placed_bets: Dict[str, int]
+    _placed_bets: Set[str]
 
     def __init__(self, session: Session):
         self.session = session
@@ -51,7 +51,7 @@ class Scanner:
         self.bot_manager.save_bots_session_data_to_redis()
 
         self._bot_manager_update_cycle = cycle(range(30))
-        self._placed_bets = {}
+        self._placed_bets = set()
 
         self._load_enabled_filters()
         self._load_odds_options()
@@ -296,7 +296,7 @@ class Scanner:
 
                 for tip in selections:
                     # Different stake for volleyball due to some problems (for now)
-                    stake = 50 if new_snapshot.event.id != 9 else 5
+                    stake = 50 if new_snapshot.event.id != 9 else 1
 
                     successful_pattern_checks.append({
                         'event': new_snapshot.event,
@@ -316,10 +316,9 @@ class Scanner:
             stake: float = pattern_check['stake']
             matcher: AbstractPatternMatcher = pattern_check['matcher']
 
-            pattern_hit_count = self._placed_bets.setdefault(tip.selection_id, 0)
-            self._placed_bets[tip.selection_id] += 1
+            if tip.selection_id not in self._placed_bets:
+                self._placed_bets.add(tip.selection_id)
 
-            if pattern_hit_count + 1 == 4:
                 bet_placement_details = [
                     BetPlacementDetails(
                         bot_id=bot_id,
@@ -333,7 +332,7 @@ class Scanner:
 
                 for bot_id, result in asyncio.run(place_multiple_bets(bet_placement_details)).items():
                     if not isinstance(result, Exception):
-                        self.telegram_notifier.send_placing_bet_confirmation(event, tip, result)
+                        self.telegram_notifier.send_placing_bet_confirmation(self.bot_manager.bots[bot_id], event, tip, result)
 
                     betting_history.append(BettingBotHistory(
                         event_name=f'{event.get_sport_name_or_emoji()} {event.first_team.name} vs {event.second_team.name}',

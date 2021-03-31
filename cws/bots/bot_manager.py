@@ -44,12 +44,13 @@ class BotManager:
             db_bot_ids.add(b.id)
 
             if b.id not in self.bots:
-                self.bots[b.id] = BetBot(b.username, b.password, b.bookmaker, b.proxy_country_code, b.is_enabled)
+                self.bots[b.id] = BetBot(b.username, b.password, b.bookmaker, b.proxy_country_code, b.is_enabled, name=b.name)
             else:
                 self.bots[b.id].change_proxy_country_code(b.proxy_country_code)
 
         # Remove bots that have been deleted from the database or disabled
         for bot_id in set(self.bots.keys()).difference(db_bot_ids):
+            self.bots[bot_id].logout()
             del self.bots[bot_id]
 
         if log_in_bots:

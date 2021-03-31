@@ -160,7 +160,9 @@ class BotInvalidCredentialsError(Exception):
 
 
 class BetBot:
-    def __init__(self, username: str, password: str, bookmaker: BookmakerType, country_code: str, is_enabled: bool, log_in: bool = False):
+    def __init__(self, username: str, password: str, bookmaker: BookmakerType, country_code: str, is_enabled: bool, log_in: bool = False,
+                 name: Optional[str] = None):
+        self.name = name
         self._username = username
         self._password = password
         self.bookmaker = bookmaker
