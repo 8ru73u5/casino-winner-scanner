@@ -11,6 +11,21 @@ $casinoWinnerOrange: #e87632;
 $desktop: 960px;
 
 
+@keyframes rotate {
+  0% {
+    transform: rotate(0);
+  }
+
+  50% {
+    transform: rotate(180deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
 #filters {
   display: flex;
   justify-content: center;

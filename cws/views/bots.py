@@ -3,6 +3,7 @@ from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError
 
 from cws.bots.bet_bot import BookmakerType, BetBot, BotInvalidCredentialsError
+from cws.bots.bot_manager import BotManager
 from cws.models import BettingBot, BettingBotHistory, BettingBotCategory
 from cws.views.auth import login_required
 
@@ -378,3 +379,57 @@ def delete_category():
         return '', 404
     else:
         return redirect(url_for('bots.add_bot'))
+
+
+@bp.route('/refresh')
+@login_required
+def refresh_bots():
+    bots_db = []
+    db_error = False
+
+    try:
+        bots_db = current_app.session.query(BettingBot).filter(BettingBot.is_enabled).all()
+    except SQLAlchemyError:
+        db_error = True
+        current_app.session.rollback()
+    finally:
+        current_app.session.close()
+
+    if db_error:
+        return '', 500
+
+    bots = {}
+    logged_bots = []
+
+    for bot_data in bots_db:
+        bot_data: BettingBot
+
+        bot = BetBot(bot_data.username, bot_data.password,
+                     bot_data.bookmaker, bot_data.proxy_country_code,
+                     bot_data.is_enabled, log_in=False)
+
+        session_data = current_app.redis_manager.get_bot_session_data(bot_data.id)
+        if session_data is None:
+            # noinspection PyBroadException
+            try:
+                bot.login(get_sportsbook_token=True)
+                logged_bots.append(bot)
+            except Exception as e:
+                return f'{e.__class__.__name__}: {e}', 500
+            else:
+                bots[bot_data.id] = bot
+        else:
+            bot.load_session_data(session_data)
+            bots[bot_data.id] = bot
+
+    # noinspection PyTypeChecker
+    bot_manager = BotManager(None)
+    bot_manager.bots = bots
+
+    bot_manager.sync_bots_wallet_balance_with_redis()
+    bot_manager.sync_bots_bet_history_with_redis()
+
+    for bot in logged_bots:
+        bot.logout()
+
+    return ''

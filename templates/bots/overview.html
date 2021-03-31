@@ -2,18 +2,28 @@
 
 {% block content %}
   <div class="container is-fluid mb-6">
-    <h1 class="title is-2 has-text-centered">Bot overview</h1>
+    <h1 class="title is-2 has-text-centered">
+      <span class="icon-text">
+        <span>Bot overview</span>
+        <span role="button" class="icon has-text-info ml-3" style="cursor: pointer;" onclick="refreshBots(this);">
+          <i class="fas fa-sync"></i>
+        </span>
+      </span>
+    </h1>
     {% for bot in bots %}
       <div class="card mb-4 pt-2" data-id="{{ bot.id }}">
         <div class="p-1" style="position: absolute; top: 0; left: 0;">
-          <span class="icon is-medium p-1">
-            <img src="{{ url_for('static', filename='img/' + bot.bookmaker.name + '_icon.ico') }}"
-                 alt="{{ bot.bookmaker.name }}" title="{{ bot.bookmaker.name }}">
-          </span>
+          <a href="https://www.{{ bot.bookmaker.name }}.com" target="_blank">
+            <span class="icon is-medium p-1">
+              <img src="{{ url_for('static', filename='img/' + bot.bookmaker.name + '_icon.ico') }}"
+                   alt="{{ bot.bookmaker.name }}" title="{{ bot.bookmaker.name|capitalize }}">
+            </span>
+          </a>
         </div>
 
         <div class="p-1" style="position: absolute; top: 0; right: 0;">
-          <a href="{{ url_for('bots.bot_bookmaker_history', bot_id=bot.id) }}" target="_blank" class="bookmaker-bet-history-link">
+          <a href="{{ url_for('bots.bot_bookmaker_history', bot_id=bot.id) }}" target="_blank"
+             class="bookmaker-bet-history-link">
             <span class="icon is-medium p-1 has-text-info" title="Go to bookmaker bet history">
               <i class="fas fa-landmark"></i>
             </span>
@@ -33,7 +43,22 @@
           <div class="content">
             <div class="columns">
               <div class="column is-flex is-align-items-center">
-                <strong class="mr-2">Name:</strong> {{ bot.name }}
+                <strong class="mr-2">Name:</strong>
+                <span class="icon-text">
+                  <span>{{ bot.name }}</span>
+                  <span role="button" class="icon is-small ml-1 has-text-info copy-clipboard"
+                        title="Copy username to clipboard"
+                        onclick="copyToClipboard(this, '{{ bot.username }}');"
+                        style="cursor: pointer; transition: all .2s ease-out;">
+                    <i class="fas fa-user"></i>
+                  </span>
+                  <span role="button" class="icon is-small ml-1 has-text-warning copy-clipboard"
+                        title="Copy password to clipboard"
+                        onclick="copyToClipboard(this, '{{ bot.password }}');"
+                        style="cursor: pointer; transition: all .2s ease-out;">
+                    <i class="fas fa-key"></i>
+                  </span>
+                </span>
               </div>
               <div class="column is-flex is-align-items-center">
                 <strong class="mr-2">Category:</strong>
@@ -79,6 +104,7 @@
 
 {% block scripts %}
   <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
   <script>
       document.querySelectorAll('input[type=checkbox], select').forEach(element => {
           element.addEventListener('change', e => {
@@ -113,5 +139,23 @@
               }
           });
       });
+
+      function copyToClipboard(element, text) {
+          navigator.clipboard.writeText(text).catch(e => console.error('Error:', e));
+          element.style.setProperty('transform', 'scale(1.2)');
+          setTimeout(() => {
+              element.style.removeProperty('transform');
+          }, 200);
+      }
+
+      function refreshBots(element) {
+          element.style.setProperty('animation', 'rotate 1s ease-in-out 0s infinite');
+          axios.get('/bots/refresh')
+              .then(() => window.location.reload())
+              .catch(e => {
+                  element.style.removeProperty('animation');
+                  swal('Error while refreshing', e.response.data, 'error');
+              });
+      }
   </script>
 {% endblock %}
