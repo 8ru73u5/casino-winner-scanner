@@ -17,7 +17,13 @@
                   <li>
                     <label class="checkbox">
                       <input class="bot-item" type="checkbox" value="{{ bot.id }}">
-                      {{ bot.name }} ({{ bot.wallet_balance or '???' }})
+                      <span class="icon-text">
+                        <span class="icon is-small">
+                          <img src="{{ url_for('static', filename='img/' + bot.bookmaker.name + '_icon.ico') }}"
+                               alt="{{ bot.bookmaker.name }}">
+                        </span>
+                        <span>{{ bot.name }} ({{ bot.wallet_balance or '???' }})</span>
+                      </span>
                     </label>
                   </li>
                 {% endfor %}
