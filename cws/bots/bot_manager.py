@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from cws.bots.bet_bot import BetBot, WalletBalance
 from cws.bots.bet_history_item import BetHistoryItem
+from cws.bots.proxy_manager import ProxyManager
 from cws.models import BettingBot as dbBetBot
 from cws.redis_manager import RedisManager
 
@@ -118,3 +119,6 @@ class BotManager:
 
             if session_data is not None:
                 self.redis_manager.set_bot_session_data(bot_id, session_data)
+
+        # Update used proxies
+        ProxyManager.set_used_proxies({b.proxy for b in self.bots.values()})

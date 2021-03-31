@@ -71,6 +71,7 @@ class Scanner:
         if next(self._bot_manager_update_cycle) == 0:
             self.bot_manager.sync_bots_wallet_balance_with_redis()
             self.bot_manager.sync_bots_bet_history_with_redis()
+            self.bot_manager.save_bots_session_data_to_redis()
 
         new_event_snapshots = self._make_snapshots(events, timestamp)
         old_event_snapshots = self.event_snapshots

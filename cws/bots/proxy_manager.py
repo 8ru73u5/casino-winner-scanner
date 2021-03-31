@@ -67,3 +67,8 @@ class ProxyManager:
     def remove_proxy_from_used_proxy_list(cls, proxy: str):
         with cls.USED_PROXIES_LOCK:
             cls.USED_PROXIES.discard(proxy)
+
+    @classmethod
+    def set_used_proxies(cls, new_used_proxy_list: Set[str]):
+        with cls.USED_PROXIES_LOCK:
+            cls.USED_PROXIES = new_used_proxy_list
