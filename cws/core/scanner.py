@@ -316,7 +316,7 @@ class Scanner:
             stake: float = pattern_check['stake']
             matcher: AbstractPatternMatcher = pattern_check['matcher']
 
-            if tip.selection_id not in self._placed_bets:
+            if tip.selection_id not in self._placed_bets and tip.odds >= 1.2:
                 self._placed_bets.add(tip.selection_id)
 
                 bet_placement_details = [
