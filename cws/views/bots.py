@@ -39,9 +39,13 @@ def overview():
 
     for bot in bots:
         wb = current_app.redis_manager.get_bet_bot_wallet_balance(bot.id)
+        bn = current_app.redis_manager.get_bet_bot_bookmaker_notifications(bot.id)
 
         if wb is not None:
             bot.wallet_balance = wb
+
+        if bn is not None:
+            bot.bookmaker_notifications = bn
 
     return render_template('bots/overview.html', bots=bots, proxies=_proxy_countries, categories=categories)
 

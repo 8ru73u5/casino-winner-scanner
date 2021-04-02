@@ -22,6 +22,7 @@ class RedisManager:
     BET_BOT_WALLETS_KEY = 'cw_bet_bots_wallet_balance'
     BET_BOT_HISTORY_KEY = 'cw_bet_bots_bet_history'
     BET_BOT_SESSION_DATA_KEY = 'cw_bet_bots_session_data'
+    BET_BOT_BOOKMAKER_NOTIFICATIONS_KEY = 'cw_bet_bots_bookmaker_notifications'
 
     def __init__(self):
         self.conn = Redis(host=AppConfig.get(AppConfig.Variables.REDIS_HOST), port=AppConfig.get(AppConfig.Variables.REDIS_PORT))
@@ -125,5 +126,15 @@ class RedisManager:
         bh = self.conn.get(f'{RedisManager.BET_BOT_HISTORY_KEY}:{bot_id}')
         if bh is not None:
             return loads(bh.decode('utf-8'))
+        else:
+            return None
+
+    def set_bet_bot_bookmaker_notifications(self, bot_id: int, bookmaker_notifications: List[dict]):
+        self.conn.set(f'{RedisManager.BET_BOT_BOOKMAKER_NOTIFICATIONS_KEY}:{bot_id}', dumps(bookmaker_notifications, ensure_ascii=False))
+
+    def get_bet_bot_bookmaker_notifications(self, bot_id: int) -> Optional[List[dict]]:
+        bn = self.conn.get(f'{RedisManager.BET_BOT_BOOKMAKER_NOTIFICATIONS_KEY}:{bot_id}')
+        if bn is not None:
+            return loads(bn.decode('utf-8'))
         else:
             return None

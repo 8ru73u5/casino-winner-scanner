@@ -104,6 +104,23 @@ class BotManager:
 
         return {bot_id: bet_history for bot_id, bet_history in await asyncio.gather(*futures)}
 
+    async def _get_bots_bookmaker_notifications(self) -> Dict[int, Optional[List[dict]]]:
+        loop = asyncio.get_event_loop()
+
+        def get_bookmaker_notifications(bot_id: int, bot: BetBot) -> Tuple[int, Optional[List[dict]]]:
+            # noinspection PyBroadException
+            try:
+                return bot_id, bot.get_notifications()
+            except:
+                return bot_id, None
+
+        futures = [
+            loop.run_in_executor(None, get_bookmaker_notifications, bot_id, bot)
+            for bot_id, bot in self.bots.items()
+        ]
+
+        return {bot_id: notifications for bot_id, notifications in await asyncio.gather(*futures)}
+
     def sync_bots_wallet_balance_with_redis(self):
         wallet_balances = asyncio.run(self._get_bots_wallet_balance())
 
@@ -113,6 +130,13 @@ class BotManager:
     def sync_bots_bet_history_with_redis(self):
         bet_histories = asyncio.run(self._get_bots_bet_history())
         self.redis_manager.set_bet_bots_bet_history(bet_histories)
+
+    def sync_bots_bookmaker_notifications_with_redis(self):
+        bookmaker_notifications = asyncio.run(self._get_bots_bookmaker_notifications())
+
+        for bot_id, notifications in bookmaker_notifications.items():
+            if notifications is not None:
+                self.redis_manager.set_bet_bot_bookmaker_notifications(bot_id, notifications)
 
     def save_bots_session_data_to_redis(self):
         for bot_id, bot in self.bots.items():

@@ -11,7 +11,7 @@
       </span>
     </h1>
     {% for bot in bots %}
-      <div class="card mb-4 pt-2" data-id="{{ bot.id }}">
+      <div class="card mb-4 pt-4" data-id="{{ bot.id }}" style="overflow: visible;">
         <div class="p-1" style="position: absolute; top: 0; left: 0;">
           <a href="https://www.{{ bot.bookmaker.name }}.com" target="_blank">
             <span class="icon is-medium p-1">
@@ -22,6 +22,27 @@
         </div>
 
         <div class="p-1" style="position: absolute; top: 0; right: 0;">
+          {% if bot.bookmaker_notifications %}
+          <div class="dropdown is-right">
+            <div class="dropdown-trigger">
+              <button class="button is-small" aria-haspopup="true" aria-controls="dropdown-menu">
+                <span class="icon is-small has-text-success">
+                  <i class="fas fa-comment"></i>
+                </span>
+              </button>
+            </div>
+            <div class="dropdown-menu" role="menu">
+              <div class="dropdown-content">
+                {% for notification in bot.bookmaker_notifications %}
+                  <div class="dropdown-item" onclick="showNotificationBody(this);">
+                    <a href="#">{{ notification['title'] }}</a>
+                    <p class="is-hidden">{{ notification['body'] }}</p>
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
           <a href="{{ url_for('bots.bot_bookmaker_history', bot_id=bot.id) }}" target="_blank"
              class="bookmaker-bet-history-link">
             <span class="icon is-medium p-1 has-text-info" title="Go to bookmaker bet history">
@@ -140,6 +161,13 @@
           });
       });
 
+      document.querySelectorAll('.dropdown-trigger > button').forEach(element => {
+          element.addEventListener('click', e => {
+              e.preventDefault()
+              element.closest('.dropdown').classList.toggle('is-active');
+          });
+      });
+
       function copyToClipboard(element, text) {
           navigator.clipboard.writeText(text).catch(e => console.error('Error:', e));
           element.style.setProperty('transform', 'scale(1.2)');
@@ -156,6 +184,11 @@
                   element.style.removeProperty('animation');
                   swal('Error while refreshing', e.response.data, 'error');
               });
+      }
+
+      function showNotificationBody(item) {
+          const [title, body] = Array.from(item.children).map(x => x.innerText.replaceAll('<br />', '\n'));
+          swal(title, body, 'info');
       }
   </script>
 {% endblock %}

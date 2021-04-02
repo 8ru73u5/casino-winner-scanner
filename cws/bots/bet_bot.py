@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from json.decoder import JSONDecodeError
 from typing import List, Optional, Tuple, Union, Dict
@@ -338,6 +339,25 @@ class BetBot:
         print('done!')
 
         return [BetHistoryItem.from_json(bet) for bet in r.json()['data']['coupons']]
+
+    @bet_login_required
+    def get_notifications(self) -> List[dict]:
+        print('Getting notifications...', end=' ')
+        r = self._get_session().get(self.bookmaker.url + '/api/v1/oms/messages/notifications')
+        r.raise_for_status()
+        print('done!')
+
+        notifications = []
+        for notification in r.json():
+            expiration_date = datetime.fromisoformat(notification['expirationDate'][:-1])
+
+            if not notification['isRead'] and expiration_date > datetime.now():
+                notifications.append({
+                    'title': notification['content']['title'],
+                    'body': notification['content']['body']
+                })
+
+        return notifications
 
     @bet_login_required
     def place_bet(self, stake: float, odds: float, market_selection_id: str, validate_stake: bool = False) -> Optional[List[dict]]:
