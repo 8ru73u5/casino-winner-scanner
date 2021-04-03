@@ -15,7 +15,7 @@ from cws.api.casino_winner import CasinoWinnerApi as Api
 from cws.api.models import Event, Tip
 from cws.bots.bet_bot import BetPlacementDetails, place_multiple_bets
 from cws.bots.bot_manager import BotManager
-from cws.bots.patterns import get_supported_sports, get_matcher, AbstractPatternMatcher
+from cws.bots.patterns import get_supported_sports, get_matcher, AbstractPatternMatcher, VolleyballMatcher
 from cws.core.notification import Notification
 from cws.core.notifier import TelegramNotifier
 from cws.core.snapshots import EventSnapshot
@@ -294,7 +294,7 @@ class Scanner:
 
                 for tip in selections:
                     # Different stake for volleyball due to some problems (for now)
-                    stake = 50 if new_snapshot.event.id != 9 else 1
+                    stake = 50 if new_snapshot.event.sport_id != VolleyballMatcher.SPORT_ID else 1
 
                     successful_pattern_checks.append({
                         'event': new_snapshot.event,
