@@ -349,7 +349,7 @@ class BetBot:
 
         notifications = []
         for notification in r.json():
-            expiration_date = datetime.fromisoformat(notification['expirationDate'][:-1])
+            expiration_date = datetime.strptime(notification['expirationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
 
             if not notification['isRead'] and expiration_date > datetime.now():
                 notifications.append({
