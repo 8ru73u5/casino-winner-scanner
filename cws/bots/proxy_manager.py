@@ -2,7 +2,7 @@ from random import choice
 from threading import Lock
 from typing import Union, List, Dict, Set
 
-from requests import get
+from requests import get, Timeout
 
 from cws.config import AppConfig
 
@@ -10,6 +10,7 @@ from cws.config import AppConfig
 class ProxyManager:
     WEBSHARE_API_TOKEN = None
     WEBSHARE_API_URL = 'https://proxy.webshare.io/api'
+    TIMEOUT = 1.5
 
     USED_PROXIES = set()
     USED_PROXIES_LOCK = Lock()
@@ -34,7 +35,16 @@ class ProxyManager:
             'Authorization': f'Token {cls._get_token()}'
         }
 
-        r = get(cls.WEBSHARE_API_URL + '/proxy/list', headers=headers, params=params)
+        for _ in range(3):
+            try:
+                r = get(cls.WEBSHARE_API_URL + '/proxy/list', headers=headers, params=params, timeout=cls.TIMEOUT)
+            except Timeout:
+                pass
+            else:
+                break
+        else:
+            raise Timeout('While getting proxy list')
+
         r.raise_for_status()
 
         proxies = set()

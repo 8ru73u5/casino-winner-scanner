@@ -5,6 +5,7 @@ from datetime import datetime
 from itertools import cycle
 from typing import Dict, List, Set
 
+from requests import Timeout
 from sqlalchemy import and_
 from sqlalchemy.dialects.postgresql import insert as psql_insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -54,7 +55,14 @@ class Scanner:
         self._load_odds_options()
         self.notifications = {}
 
-        events, timestamp = Api.get_all_live_events()
+        while True:
+            try:
+                events, timestamp = Api.get_all_live_events()
+            except Timeout:
+                pass
+            else:
+                break
+
         self.event_snapshots = self._make_snapshots(events, timestamp)
 
     def cycle(self):

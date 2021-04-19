@@ -8,7 +8,7 @@ from json.decoder import JSONDecodeError
 from typing import List, Optional, Tuple, Union, Dict
 
 from requests import Session, HTTPError
-from requests.exceptions import ProxyError
+from requests.exceptions import ProxyError, Timeout
 
 from cws.bots.bet_history_item import BetHistoryItem
 from cws.bots.proxy_manager import ProxyManager
@@ -161,6 +161,9 @@ class BotInvalidCredentialsError(Exception):
 
 
 class BetBot:
+    TIMEOUT = 3
+    RETRIES = 3
+
     def __init__(self, username: str, password: str, bookmaker: BookmakerType, country_code: str, is_enabled: bool, log_in: bool = False,
                  name: Optional[str] = None):
         self.name = name
@@ -257,9 +260,9 @@ class BetBot:
         }
 
         print('Logging in...', end=' ')
-        for _ in range(3):
+        for _ in range(BetBot.RETRIES):
             try:
-                r = self._get_session().post(self.bookmaker.url + '/api/v1/single-sign-on-sessions', json=data)
+                r = self._get_session().post(self.bookmaker.url + '/api/v1/single-sign-on-sessions', json=data, timeout=BetBot.TIMEOUT)
                 r.raise_for_status()
                 break
             except HTTPError as e:
@@ -274,6 +277,8 @@ class BetBot:
             except ProxyError:
                 print('Proxy error! Retrying login with new proxy')
                 self.get_new_random_proxy()
+            except Timeout:
+                pass
         else:
             raise RuntimeError(f'Too many login retries for {self._username}')
 
@@ -292,7 +297,16 @@ class BetBot:
             return
 
         print('Logging out...', end=' ')
-        r = self._get_session().delete(self.bookmaker.url + '/api/v1/current-single-sign-on-session')
+        for _ in range(BetBot.RETRIES):
+            try:
+                r = self._get_session().delete(self.bookmaker.url + '/api/v1/current-single-sign-on-session', timeout=BetBot.TIMEOUT)
+            except Timeout:
+                pass
+            else:
+                break
+        else:
+            raise Timeout('While logging out')
+
         r.raise_for_status()
         print('done!')
 
@@ -302,7 +316,17 @@ class BetBot:
     @bet_login_required
     def _get_sportsbook_token(self):
         print('Getting sportsbook token...', end=' ')
-        r = self._get_session().get(f'{self.bookmaker.url}/api/sb/v2/sportsbookgames/betsson/{self._customer_id}')
+
+        for _ in range(BetBot.RETRIES):
+            try:
+                r = self._get_session().get(f'{self.bookmaker.url}/api/sb/v2/sportsbookgames/betsson/{self._customer_id}', timeout=BetBot.TIMEOUT)
+            except Timeout:
+                pass
+            else:
+                break
+        else:
+            raise Timeout('While getting sportsbook token')
+
         r.raise_for_status()
         print('done!')
 
@@ -312,7 +336,17 @@ class BetBot:
     def get_wallet_balance(self, reload: bool = False) -> WalletBalance:
         if reload:
             print('Getting wallet balance...', end=' ')
-            r = self._get_session().get(self.bookmaker.url + '/api/v2/wallet/balance')
+
+            for _ in range(BetBot.RETRIES):
+                try:
+                    r = self._get_session().get(self.bookmaker.url + '/api/v2/wallet/balance', timeout=BetBot.TIMEOUT)
+                except Timeout:
+                    pass
+                else:
+                    break
+            else:
+                raise Timeout('While getting wallet balance')
+
             r.raise_for_status()
             print('done!')
 
@@ -334,7 +368,18 @@ class BetBot:
         headers = {'sportsbookToken': self._sportsbook_token}
 
         print('Getting bet history...', end=' ')
-        r = self._get_session().get(self.bookmaker.url + '/api/sb/v1/widgets/coupon-history/v1', headers=headers, params=params)
+
+        for _ in range(BetBot.RETRIES):
+            try:
+                r = self._get_session().get(self.bookmaker.url + '/api/sb/v1/widgets/coupon-history/v1', headers=headers, params=params,
+                                            timeout=BetBot.TIMEOUT)
+            except Timeout:
+                pass
+            else:
+                break
+        else:
+            raise Timeout('While getting bet history')
+
         r.raise_for_status()
         print('done!')
 
@@ -343,7 +388,17 @@ class BetBot:
     @bet_login_required
     def get_notifications(self) -> List[dict]:
         print('Getting notifications...', end=' ')
-        r = self._get_session().get(self.bookmaker.url + '/api/v1/oms/messages/notifications')
+
+        for _ in range(BetBot.RETRIES):
+            try:
+                r = self._get_session().get(self.bookmaker.url + '/api/v1/oms/messages/notifications', timeout=BetBot.TIMEOUT)
+            except Timeout:
+                pass
+            else:
+                break
+        else:
+            raise Timeout('While getting notifications')
+
         r.raise_for_status()
         print('done!')
 
@@ -386,7 +441,17 @@ class BetBot:
         headers = {'sportsbookToken': self._sportsbook_token}
 
         print('Placing bet...', end=' ')
-        r = self._get_session().post(self.bookmaker.url + '/api/sb/v1/coupons', headers=headers, json=data)
+
+        for _ in range(BetBot.RETRIES):
+            try:
+                r = self._get_session().post(self.bookmaker.url + '/api/sb/v1/coupons', headers=headers, json=data, timeout=BetBot.TIMEOUT)
+            except Timeout:
+                pass
+            else:
+                break
+        else:
+            raise Timeout('While placing bet')
+
         r.raise_for_status()
         print('done!')
 

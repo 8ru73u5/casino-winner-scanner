@@ -9,6 +9,7 @@ from .models import Event
 class CasinoWinnerApi:
     EVENTS_URL = 'https://krn-api-a.bpsgameserver.com/isa/v2/1101/en/event'
     DATE_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
+    TIMEOUT = 0.5
 
     @classmethod
     def get_all_live_events(cls) -> Tuple[List[Event], datetime]:
@@ -17,7 +18,7 @@ class CasinoWinnerApi:
             'eventPhase': 2,
             'include': 'scoreboard,scoresummary',
             'override': 'Mst1X2ParticipantName'
-        })
+        }, timeout=cls.TIMEOUT)
 
         r.raise_for_status()
 
