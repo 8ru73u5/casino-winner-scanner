@@ -162,6 +162,7 @@ class BotInvalidCredentialsError(Exception):
 
 class BetBot:
     TIMEOUT = 3
+    PLACE_BET_TIMEOUT = 20
     RETRIES = 3
 
     def __init__(self, username: str, password: str, bookmaker: BookmakerType, country_code: str, is_enabled: bool, log_in: bool = False,
@@ -441,17 +442,7 @@ class BetBot:
         headers = {'sportsbookToken': self._sportsbook_token}
 
         print('Placing bet...', end=' ')
-
-        for _ in range(BetBot.RETRIES):
-            try:
-                r = self._get_session().post(self.bookmaker.url + '/api/sb/v1/coupons', headers=headers, json=data, timeout=BetBot.TIMEOUT)
-            except Timeout:
-                pass
-            else:
-                break
-        else:
-            raise Timeout('While placing bet')
-
+        r = self._get_session().post(self.bookmaker.url + '/api/sb/v1/coupons', headers=headers, json=data, timeout=BetBot.PLACE_BET_TIMEOUT)
         r.raise_for_status()
         print('done!')
 
