@@ -182,7 +182,7 @@ class BasketballMatcher(AbstractPatternMatcher):
                 4: (1908, 6664)
             }
 
-            if self.phase_changed:
+            if self.phase_changed and self.current_quarter != 1:
                 if self.phase_type is PhaseType.OVERTIME:
                     m_id = market_ids[4]
                     b_ids = bet_ids[4]
@@ -254,6 +254,9 @@ class BasketballMatcher(AbstractPatternMatcher):
             return
 
         if half_or_quarter is PhaseType.QUARTER and self.phase_type is PhaseType.HALF:
+            return
+
+        if self.phase_type is PhaseType.QUARTER and self.current_quarter == 1:
             return
 
         if half_or_quarter is PhaseType.QUARTER:

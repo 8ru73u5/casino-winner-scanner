@@ -9,7 +9,7 @@ from .models import Event
 class CasinoWinnerApi:
     EVENTS_URL = 'https://krn-api-a.bpsgameserver.com/isa/v2/1101/en/event'
     DATE_FORMAT = '%a, %d %b %Y %H:%M:%S GMT'
-    TIMEOUT = 0.5
+    TIMEOUT = 1
 
     @classmethod
     def get_all_live_events(cls) -> Tuple[List[Event], datetime]:
