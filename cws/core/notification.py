@@ -63,6 +63,9 @@ class Notification:
         if self.second_notification_sent:
             header = '‼‼‼\n' + header
 
+        if self.tip_group[0].is_five_minute_action():
+            header = '🔔' + header
+
         return '\n'.join([header, phase, score, bet, tips])
 
     def __hash__(self):
