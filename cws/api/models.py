@@ -118,7 +118,7 @@ class Event:
 
     def is_tip_eligible_for_notification(self, tip: Tip) -> bool:
         # 5-minute action tips
-        if self.sport_id == 1 and tip.is_five_minute_action():
+        if self.check_if_tip_is_five_minute_action(tip):
             return self.check_if_five_minute_action_tip_in_range(tip)
 
         if self.sport_id in [1, 58] and \
@@ -194,12 +194,14 @@ class Event:
     def __hash__(self):
         return self.id
 
+    def check_if_tip_is_five_minute_action(self, tip: Tip) -> bool:
+        return self.sport_id == 1 and \
+               tip.market_group_id == 4 and \
+               tip.bet_group_name_real.startswith('5')
+
     def check_if_five_minute_action_tip_in_range(self, tip: Tip) -> bool:
         if self.time is None:
             return False
-
-        if not tip.is_five_minute_action():
-            raise ValueError('Tip is not a 5-minute action tip!')
 
         rng = tip.get_five_minute_action_tip_range()
         if rng is None:
@@ -289,13 +291,7 @@ class Tip:
     def __hash__(self):
         return hash((self.market_group_id, self.bet_group_id, self.id))
 
-    def is_five_minute_action(self) -> bool:
-        return self.bet_group_name_real.startswith('5-minute Action')
-
     def get_five_minute_action_tip_range(self) -> Optional[Tuple[str, str]]:
-        if not self.is_five_minute_action():
-            raise ValueError('Tip is not a 5-minute action tip!')
-
         bounds = Tip.FIVE_MINUTE_ACTION_REGEX.search(self.bet_group_name_real)
         if bounds is None:
             return None
