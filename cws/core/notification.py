@@ -63,7 +63,7 @@ class Notification:
         if self.second_notification_sent:
             header = '‼‼‼\n' + header
 
-        if self.tip_group[0].is_five_minute_action():
+        if self.event.check_if_tip_is_five_minute_action(self.tip_group[0]):
             header = '🔔' + header
 
         return '\n'.join([header, phase, score, bet, tips])
