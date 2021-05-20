@@ -92,6 +92,20 @@ class Event:
         current_phase_bets = set()
         self.deduced_current_phase = {}
 
+        basketball_quarter = None
+        basketball_half = None
+
+        # For basketball only
+        if self.sport_id == 4:
+            phase_number = int(self.game_phase[0])
+            is_quarter = 'quarter' in self.game_phase.lower()
+
+            if is_quarter:
+                basketball_quarter = phase_number
+                basketball_half = 1 if basketball_quarter < 3 else 2
+            else:
+                basketball_half = phase_number
+
         for phase_name in phase_names:
             phase_related_bets = [bet_name for bet_name in bet_names if phase_name in bet_name]
 
@@ -108,7 +122,17 @@ class Event:
             if len(bet_names_with_phases) == 0:
                 continue
 
-            current_phase = min(x[1] for x in bet_names_with_phases)
+            if self.sport_id == 4:
+                if phase_name == 'quarter':
+                    if basketball_quarter is not None:
+                        current_phase = basketball_quarter
+                    else:
+                        continue
+                else:
+                    current_phase = basketball_half
+            else:
+                current_phase = min(x[1] for x in bet_names_with_phases)
+
             current_phase_bets.update(x[0] for x in bet_names_with_phases if x[1] == current_phase)
 
             self.deduced_current_phase[phase_name] = current_phase
