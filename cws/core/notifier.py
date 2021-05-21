@@ -7,7 +7,7 @@ from telegram.ext import messagequeue as mq
 from cws.api.models import Tip, Event
 from cws.bots.bet_bot import BetBot
 from cws.config import AppConfig
-from cws.core.notification import Notification
+from cws.core.notification import Notification, LowActiveTipsNotification
 
 
 class TelegramNotifier(Bot):
@@ -42,6 +42,12 @@ class TelegramNotifier(Bot):
         return arranged
 
     def send_notifications(self, notifications: List[Notification]):
+        messages = [n.construct_telegram_message() for n in notifications]
+
+        for msg in TelegramNotifier.arrange_messages(messages):
+            self.send_message(self.chat_id, msg, ParseMode.HTML)
+
+    def send_low_active_tips_notifications(self, notifications: List[LowActiveTipsNotification]):
         messages = [n.construct_telegram_message() for n in notifications]
 
         for msg in TelegramNotifier.arrange_messages(messages):

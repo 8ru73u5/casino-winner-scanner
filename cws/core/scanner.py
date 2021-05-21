@@ -17,7 +17,7 @@ from cws.api.models import Event, Tip
 from cws.bots.bet_bot import BetPlacementDetails, place_multiple_bets
 from cws.bots.bot_manager import BotManager
 from cws.bots.patterns import get_supported_sports, get_matcher, AbstractPatternMatcher, VolleyballMatcher
-from cws.core.notification import Notification
+from cws.core.notification import Notification, LowActiveTipsNotification
 from cws.core.notifier import TelegramNotifier
 from cws.core.snapshots import EventSnapshot
 from cws.database import SessionLocal
@@ -31,6 +31,7 @@ class Scanner:
     event_snapshots: Dict[int, EventSnapshot]
     enabled_filters: Dict[int, int]
     notifications: Dict[int, Notification]
+    low_active_tips_notifications: Dict[int, LowActiveTipsNotification]
     min_odds: float
     max_odds: float
     auto_break_min_idle_time: int
@@ -54,6 +55,7 @@ class Scanner:
         self._load_enabled_filters()
         self._load_odds_options()
         self.notifications = {}
+        self.low_active_tips_notifications = {}
 
         while True:
             try:
@@ -265,10 +267,20 @@ class Scanner:
         self.redis_manager.set_notifications(notifications.values())
         self.redis_manager.set_app_status(len(self.event_snapshots), len(self.notifications))
 
+        # Low active tips notifications
+        for event_id, event_snapshot in self.event_snapshots.items():
+            if event_snapshot.check_if_has_only_three_active_unchanged_tips():
+                n = LowActiveTipsNotification(event_snapshot.event)
+                if event_id not in self.low_active_tips_notifications:
+                    self.low_active_tips_notifications[event_id] = n
+            elif event_id in self.low_active_tips_notifications:
+                del self.low_active_tips_notifications[event_id]
+
         self._send_telegram_notification()
 
     def _send_telegram_notification(self):
         to_send = []
+        to_send_low_active = []
 
         for n in self.notifications.values():
             if n.has_five_minute_action_tips and not n.first_notification_sent:
@@ -281,7 +293,13 @@ class Scanner:
                 n.second_notification_sent = True
                 to_send.append(n)
 
+        for n in self.low_active_tips_notifications.values():
+            if not n.sent:
+                n.sent = True
+                to_send_low_active.append(n)
+
         self.telegram_notifier.send_notifications(to_send)
+        self.telegram_notifier.send_low_active_tips_notifications(to_send_low_active)
 
     def _check_for_patterns(self, new_event_snapshots: Dict[int, EventSnapshot], old_event_snapshots: Dict[int, EventSnapshot]) -> List[dict]:
         supported_sports = get_supported_sports()

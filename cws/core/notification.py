@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import List
+from typing import List, FrozenSet
 
 from cws.api.models import Event, Tip
 
@@ -72,3 +72,28 @@ class Notification:
 
     def __hash__(self):
         return hash((self.event.id, self.tip_group[0].unique_tip_group_id))
+
+
+class LowActiveTipsNotification:
+    event: Event
+    bet_names: FrozenSet[str]
+    sent: bool
+
+    def __init__(self, event: Event):
+        self.event = event
+        self.bet_names = frozenset(t.bet_group_name_real for t in self.event.tips)
+        self.sent = False
+
+    def construct_telegram_message(self) -> str:
+        header = f'🧨🧨🧨\n{self.event.get_sport_name_or_emoji()} <b>{self.event.first_team.name} vs {self.event.second_team.name}</b>'
+        phase = f'Time: {self.event.get_time_or_phase()}'
+        score = f'Score: {self.event.get_score()}'
+        if self.event.has_score_info():
+            score += f' ({self.event.first_team.score + self.event.second_team.score})'
+
+        bets = 'Bets:\n' + '\n'.join([f'-> {bet_name}' for bet_name in self.bet_names])
+
+        return '\n'.join([header, phase, score, bets])
+
+    def __hash__(self):
+        return hash((self.event.id, self.bet_names))

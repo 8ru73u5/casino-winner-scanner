@@ -12,11 +12,16 @@ class EventSnapshot:
     snapshot: Dict[MarketID_t, Dict[BetID_t, Dict[TipGroupID_t, TipSnapshot]]]
     event: Event
     timestamp: datetime
+    seconds_since_active_tip_count_change: int
+    active_tip_count: int
 
     def __init__(self, event: Event, timestamp: datetime, enabled_filters: Dict[int, int]):
         self.snapshot = {}
         self.event = event
         self.timestamp = timestamp
+
+        self.active_tip_count = 0
+        self.seconds_since_active_tip_count_change = 0
 
         self._create_snapshot(enabled_filters)
 
@@ -26,6 +31,8 @@ class EventSnapshot:
 
             if ident not in enabled_filters:
                 continue
+
+            self.active_tip_count += 1
 
             market_group = self.snapshot.setdefault(tip.market_group_id, {})
             tip_group = market_group.setdefault(tip.unique_tip_group_id, {})
@@ -48,6 +55,23 @@ class EventSnapshot:
                             continue
                         else:
                             tip_snapshot.update(old_tip_snapshot, time_between_updates)
+
+        if self.active_tip_count == old_snapshot.active_tip_count:
+            self.seconds_since_active_tip_count_change = old_snapshot.seconds_since_active_tip_count_change + time_between_updates
+        else:
+            self.seconds_since_active_tip_count_change = 0
+
+    def check_if_has_only_three_active_unchanged_tips(self) -> bool:
+        if self.active_tip_count > 3 or self.seconds_since_active_tip_count_change < 15:
+            return False
+
+        for bets in self.snapshot.values():
+            for tip_snapshots in bets.values():
+                for tip_snapshot in tip_snapshots.values():
+                    if tip_snapshot.tip.is_active and tip_snapshot.time_since_last_change < 15:
+                        return False
+
+        return True
 
 
 class TipSnapshot:
