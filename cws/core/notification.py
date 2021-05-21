@@ -11,6 +11,7 @@ class Notification:
     triggered_on: datetime
     first_notification_sent: bool
     second_notification_sent: bool
+    has_five_minute_action_tips: bool
 
     def __init__(self, event: Event, tip_group: List[Tip]):
         self.event = event
@@ -18,12 +19,10 @@ class Notification:
         self.triggered_on = datetime.now()
         self.first_notification_sent = False
         self.second_notification_sent = False
+        self.has_five_minute_action_tips = self.event.check_if_tip_is_five_minute_action(self.tip_group[0])
 
     def update(self, updated_event: Event):
         self.event = updated_event
-
-    def has_five_minute_action_tips(self) -> bool:
-        return self.event.check_if_tip_is_five_minute_action(self.tip_group[0])
 
     @property
     def uptime_seconds(self) -> int:
@@ -66,7 +65,7 @@ class Notification:
         if self.second_notification_sent:
             header = '‼‼‼\n' + header
 
-        if self.event.check_if_tip_is_five_minute_action(self.tip_group[0]):
+        if self.has_five_minute_action_tips:
             header = '🔔' + header
 
         return '\n'.join([header, phase, score, bet, tips])

@@ -271,7 +271,7 @@ class Scanner:
         to_send = []
 
         for n in self.notifications.values():
-            if n.has_five_minute_action_tips() and not n.first_notification_sent:
+            if n.has_five_minute_action_tips and not n.first_notification_sent:
                 n.first_notification_sent = True
                 to_send.append(n)
             elif not n.first_notification_sent and n.uptime_seconds >= self.telegram_notification_min_uptime:
