@@ -22,6 +22,9 @@ class Notification:
     def update(self, updated_event: Event):
         self.event = updated_event
 
+    def has_five_minute_action_tips(self) -> bool:
+        return self.event.check_if_tip_is_five_minute_action(self.tip_group[0])
+
     @property
     def uptime_seconds(self) -> int:
         return int((datetime.now() - self.triggered_on).total_seconds())
