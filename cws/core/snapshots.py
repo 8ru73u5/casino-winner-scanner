@@ -62,13 +62,15 @@ class EventSnapshot:
             self.seconds_since_active_tip_count_change = 0
 
     def check_if_has_only_three_active_unchanged_tips(self) -> bool:
-        if self.active_tip_count > 3 or self.seconds_since_active_tip_count_change < 15:
+        trigger_time = 60
+
+        if self.active_tip_count > 3 or self.seconds_since_active_tip_count_change < trigger_time:
             return False
 
         for bets in self.snapshot.values():
             for tip_snapshots in bets.values():
                 for tip_snapshot in tip_snapshots.values():
-                    if tip_snapshot.tip.is_active and tip_snapshot.time_since_last_change < 15:
+                    if tip_snapshot.tip.is_active and tip_snapshot.time_since_last_change < trigger_time:
                         return False
 
         return True

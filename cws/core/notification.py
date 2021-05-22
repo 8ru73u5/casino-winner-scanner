@@ -81,7 +81,7 @@ class LowActiveTipsNotification:
 
     def __init__(self, event: Event):
         self.event = event
-        self.bet_names = frozenset(t.bet_group_name_real for t in self.event.tips)
+        self.bet_names = frozenset(t.bet_group_name_real for t in self.event.tips if t.is_active)
         self.sent = False
 
     def construct_telegram_message(self) -> str:
