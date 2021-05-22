@@ -235,6 +235,9 @@ class Event:
         begin = rng[0]
         start_minute = int(begin.split(':')[0])
 
+        if 45 <= start_minute <= 50:
+            return False
+
         return start_minute <= self.time[0]
 
 
