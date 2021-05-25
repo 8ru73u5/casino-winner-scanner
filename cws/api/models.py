@@ -11,7 +11,7 @@ from .errors import InvalidApiResponseError
 class Event:
     id: int
     time: Optional[Tuple[int, int]]  # (minutes, seconds)
-    is_break: Optional[int]
+    is_break: Optional[bool]
     game_phase: str
     sport_id: int
     sport_name: str
