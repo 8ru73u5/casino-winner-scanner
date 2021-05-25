@@ -269,8 +269,8 @@ class Scanner:
 
         # Low active tips notifications
         for event_id, event_snapshot in self.event_snapshots.items():
-            if event_snapshot.check_if_has_only_three_active_unchanged_tips():
-                n = LowActiveTipsNotification(event_snapshot.event)
+            if (tip_groups := event_snapshot.get_unchanged_active_tip_groups()) is not None:
+                n = LowActiveTipsNotification(event_snapshot.event, tip_groups)
                 if event_id not in self.low_active_tips_notifications:
                     self.low_active_tips_notifications[event_id] = n
             elif event_id in self.low_active_tips_notifications:
