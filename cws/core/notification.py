@@ -84,6 +84,12 @@ class LowActiveTipsNotification:
         self.bet_names = frozenset(t[0].bet_group_name_real for t in tip_groups)
         self.sent = False
 
+        self.odds_values = []
+        for tip_group in tip_groups:
+            self.odds_values.append(
+                ' / '.join([f'{t.odds:.2f}' for t in tip_group])
+            )
+
     def construct_telegram_message(self) -> str:
         header = f'🧨🧨🧨\n{self.event.get_sport_name_or_emoji()} <b>{self.event.first_team.name} vs {self.event.second_team.name}</b>'
         phase = f'Time: {self.event.get_time_or_phase()}'
@@ -91,7 +97,7 @@ class LowActiveTipsNotification:
         if self.event.has_score_info():
             score += f' ({self.event.first_team.score + self.event.second_team.score})'
 
-        bets = 'Bets:\n' + '\n'.join([f'-> {bet_name}' for bet_name in self.bet_names])
+        bets = 'Bets:\n' + '\n'.join([f'-> {bet_name} ({odds})' for bet_name, odds in zip(self.bet_names, self.odds_values)])
 
         return '\n'.join([header, phase, score, bets])
 

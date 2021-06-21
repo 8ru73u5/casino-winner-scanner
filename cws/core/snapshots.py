@@ -90,7 +90,10 @@ class EventSnapshot:
                 if tip_group_id not in self.active_tip_groups:
                     continue
 
-                if min(t.time_since_last_change for t in tip_snapshots.values()) >= trigger_time:
+                tip = next(t.tip for t in tip_snapshots.values())
+
+                if min(t.time_since_last_change for t in tip_snapshots.values()) >= trigger_time \
+                        and self.event.is_tip_eligible_for_notification(tip):
                     unchanged_tip_groups.append(self.active_tip_groups[tip_group_id])
 
         if len(unchanged_tip_groups) != 0:
